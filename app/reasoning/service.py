@@ -35,7 +35,9 @@ from app.retrieval.search import RetrievalService, SearchFilters
 from app.schemas.query import QueryRequest, QueryResponse
 
 _EXTERNAL_KNOWLEDGE_ALLOWED_MODES = {"REFLECT"}
-MIN_MEMORIES_FOR_PURE_RECALL = 3
+# V1 Rule (Locked): Token-threshold is the single source of truth for epistemic boundary.
+# Count-based rule ("< 3 memories") has been retired — see PROJECT_STRUCTURE.md.
+MIN_CONTEXT_TOKENS = 800  # configurable: set EPISTEMIC_MIN_CONTEXT_TOKENS env
 
 
 class ReasoningService:
@@ -75,14 +77,17 @@ class ReasoningService:
         mode_instruction = self._mode_ctrl.get_instruction(request.mode)
         policy = self._mode_ctrl.get_policy(request.mode)
 
-        # 4. Epistemic boundary decision (V1 Rules):
-        #    - If mode allows external knowledge AND we have fewer than MIN memories
-        #      → allow LLM to use external knowledge
-        #    - RECALL and CHALLENGE: NEVER allow external knowledge
-        external_knowledge_used = (
-            policy.can_use_external_knowledge
-            and len(budgeted) < MIN_MEMORIES_FOR_PURE_RECALL
-        )
+        # 4. Epistemic boundary decision — V1 Locked Rule:
+        #    Token-threshold is the SINGLE source of truth.
+        #    RECALL and CHALLENGE: NEVER use external knowledge (mode lock).
+        #    REFLECT: allowed only when total_context_tokens < MIN_CONTEXT_TOKENS.
+        if policy.can_use_external_knowledge:  # True only for REFLECT
+            total_context_tokens = sum(
+                self._llm.count_tokens(m.raw_text) for m in budgeted
+            )
+            external_knowledge_used = total_context_tokens < MIN_CONTEXT_TOKENS
+        else:
+            external_knowledge_used = False
 
         # 5. Load personality and build prompt
         personality = load_personality()

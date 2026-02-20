@@ -77,7 +77,10 @@ Deliverables:
 [ ] ENUM types tạo đúng trong DB
 [ ] Alembic init + first migration
 [ ] alembic upgrade head chạy không lỗi
-[ ] Tất cả 5 index tạo đúng
+[ ] Tất cả 7 index tạo đúng:
+      idx_memory_embedding (HNSW), idx_memory_created_at, idx_memory_content_type,
+      idx_memory_metadata (GIN), idx_memory_checksum (UNIQUE),
+      idx_embedding_jobs_status, idx_memory_embedding_model
 [ ] MemoryRepository.insert() hoạt động
 [ ] MemoryRepository.get_by_id() hoạt động
 [ ] MemoryRepository.get_by_checksum() hoạt động

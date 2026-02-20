@@ -250,36 +250,37 @@ Lý do chọn recall cao:
 
 ## Epistemic Boundary Enforcement
 
-Reasoning layer phải phân biệt:
+Reasoning layer phải phân biệt rõ: **memory-based reasoning** vs **external knowledge reasoning**.
 
-- memory-based reasoning
-- external knowledge reasoning
+### Rule V1 (Locked — Single Source of Truth)
 
-- Nếu retrieval không đủ context (ít hơn 3 memory HOẶC tổng token context < ngưỡng tối thiểu),
-- LLM có thể sử dụng external knowledge,
-nhưng bắt buộc:
+External knowledge chỉ được phép trong **REFLECT mode** khi **tổng token của memory context < MIN_CONTEXT_TOKENS (800)**:
 
-- phải ghi rõ trong response
-- phải set external_knowledge_used = true
-- phải log trong reasoning_logs
-- External knowledge boundary không dựa vào số lượng memory,
-mà dựa vào tổng chất lượng context.
+```python
+# Pseudocode — đây là rule duy nhất. Không có rule nào khác.
+MIN_CONTEXT_TOKENS = 800  # configurable qua env var EPISTEMIC_MIN_CONTEXT_TOKENS
 
-Rule V1 (Locked):
+if mode not in {"REFLECT"}:
+    external_knowledge_used = False  # RECALL và CHALLENGE LUÔN bị khóa
+else:  # REFLECT only
+    total_context_tokens = sum(count_tokens(m.raw_text) for m in budgeted_memories)
+    external_knowledge_used = total_context_tokens < MIN_CONTEXT_TOKENS
+```
 
+### Quy Tắc Bắt Buộc
 
-- LLM is allowed to use external knowledge when:
-    - The user explicitly requests comparison, expansion, or market context
-    - Memory context does not fully cover the semantic scope of the question
+Nếu `external_knowledge_used = True`, LLM PHẢI:
+- Ghi rõ `[External knowledge used]` trong response
+- `external_knowledge_used = true` được set trong response và reasoning_logs
 
-- However, it MUST:
-    - Clearly state when external knowledge is used
-    - Set external_knowledge_used = true
-    - Log this flag in reasoning_logs
+### Tại Sao Token-Threshold (Không Phải Count-Based)
 
-- Memory-first principle remains:
-    - Reasoning must prioritize retrieved memory
-    - External knowledge is supplementary, not primary
+- 3 memory dài có thể = 2,000 tokens → đủ context, không cần external knowledge
+- 10 memory một câu có thể = 150 tokens → không đủ context, REFLECT được phép dùng external
+- Token-threshold đo **chất lượng context thực tế**, không phải số lượng records
+
+> ⚠️ Rule "nếu ≥ 3 memory → không được dùng external knowledge" đã bị retire.
+> Token-threshold là chuẩn duy nhất.
 
     
 ### 5.2. Triết Lý Mode
@@ -300,12 +301,13 @@ response = llm_adapter.generate(prompt)
 
 ### 5.3. Policy Guard (Ràng Buộc Theo Mode)
 
-| Mode | Ràng Buộc |
-|---|---|
-| RECALL | Không được phép suy diễn |
-| REFLECT | Phải cite memory_id |
-| CHALLENGE | Bắt buộc dựa trên memory, chỉ ra mâu thuẫn |
-| ALL | Nếu ≥ 3 memory → không được dùng external knowledge |
+| Mode | External Knowledge | Cite Memory | Speculate |
+|---|---|---|---|
+| RECALL | ❌ Không bao giờ | Không bắt buộc | ❌ Không |
+| REFLECT | ✅ Khi context < 800 tokens | ✅ Bắt buộc | ✅ Có thể |
+| CHALLENGE | ❌ Không bao giờ | ✅ Bắt buộc | ❌ Không |
+
+> Không còn rule "≥ 3 memory". Chuẩn duy nhất: **token-threshold (xem Epistemic Boundary section)**.
 
 Nếu không có policy guard → mode chỉ là prompt decoration.
 

@@ -233,6 +233,7 @@ CREATE TABLE reasoning_logs (
 | 4 | `idx_memory_metadata` | GIN | Filter JSONB linh hoạt |
 | 5 | `idx_memory_checksum` | B-Tree UNIQUE | Chống duplicate insert |
 | 6 | `idx_embedding_jobs_status` | B-Tree | Worker poll nhanh |
+| 7 | `idx_memory_embedding_model` | B-Tree | Isolation cross-model embedding — bắt buộc filter |
 
 ### 6.2. SQL Tạo Index
 
@@ -315,6 +316,7 @@ WITH candidates AS (
         importance_score,
         created_at,
         metadata,
+        is_summary,
         -- Semantic score (1 - cosine_distance = cosine_similarity)
         1 - (embedding <=> $1::vector) AS similarity
     FROM memory_records
@@ -322,6 +324,7 @@ WITH candidates AS (
     AND exclude_from_retrieval = false
     AND is_archived = false
     AND embedding_model = $5
+    AND is_summary = false           -- ← Mặc định loại bỏ summary. Override bằng $7 = true
       -- Optional filters
       AND ($2::content_type IS NULL OR content_type = $2)
       AND ($3::timestamptz IS NULL OR created_at >= $3)
@@ -338,6 +341,7 @@ SELECT
     importance_score,
     created_at,
     metadata,
+    is_summary,
     similarity,
     -- Final ranking score
     (
@@ -354,6 +358,7 @@ LIMIT 30;
 
 
 ```
+- $7 = include_summaries (BOOLEAN, default false). Khi REFLECT cần dùng summary: truyền $7 = true.
 - Recency dùng exponential decay thay vì inverse linear decay.
 - Half-life mặc định = 30 ngày.
 - Mode-specific ranking có thể override decay rate.
@@ -443,14 +448,18 @@ def select_memories_within_budget(
     return selected
 ```
 
-### 8.2. Hybrid Context Strategy (Cho Recall Cao)
+### 8.2. Hybrid Context Strategy — V1 Drop-Only
 
-1. Lấy top 30 records
-2. Tính token
-3. Nếu vượt budget:
-   - Giữ full text cho **top 5**
-   - Tóm tắt **10 cái tiếp theo**
-   - Drop phần còn lại
+1. Lấy top 30 records (đã rank theo final_score)
+2. Tính tổng token của từng record
+3. Nếu vượt budget (`MAX_CONTEXT_TOKENS = 3000`):
+   - Giữ các memory fit trong budget (theo thứ tự final_score DESC)
+   - **Drop phần còn lại** — không summarize, không truncate text
+
+> ⚠️ **V1 Strict: Không có runtime summarization.**
+> "Tóm tắt 10 cái tiếp theo" là V2 feature, không được implement ở V1.
+> Lý do: LLM không được ghi vào memory (nguyên tắc #2).
+> Đây là trách nhiệm của `TokenGuard.check_budget()` — drop-only.
 
 ### 8.3. Diversity Guard
 
@@ -584,42 +593,67 @@ Nhưng có thể:
 Selective forgetting là loại khỏi lớp suy luận, không phải xóa khỏi storage.
 
 
-### 11.7 Summary Strategy (V1 Locked)
+### 11.7 Summary Strategy (V1 Locked — Strict)
 
-Summary được phép lưu trong memory_records.
+**V1: LLM không được persist summary vào memory_records.**
 
-Quy tắc bắt buộc:
+Lý do: Nguyên tắc #2 của hệ thống — "LLM không được sửa hoặc ghi trực tiếp vào memory."
+Nếu LLM insert summary → vi phạm core principle.
 
-- raw_text gốc không bao giờ bị thay thế.
-- Summary phải có metadata.parent_id trỏ tới memory gốc.
-- is_summary = true.
-- Summary không được dùng trong RECALL mode.
-- Summary không được dùng trong CHALLENGE mode.
-- Retrieval mặc định loại bỏ is_summary = true.
-- REFLECT mode có thể sử dụng summary nếu thiếu token budget.
+#### V1 Rules
 
-Summary là lớp tối ưu hóa retrieval,
-không phải memory gốc.
+| Rule | Chi Tiết |
+|---|---|
+| LLM không insert summary | Summary do LLM tạo là **ephemeral** — dùng trong request, không ghi DB |
+| `is_summary` field | **Reserved cho V2**. V1 không dùng |
+| Token trimming | **Drop-only**: nếu vượt budget → drop memory thấp nhất, không summarize |
+| Retrieval | `is_summary = false` filter luôn bật (vì V1 không có summary records) |
+
+#### V2 — Summary Persistence (Planned)
+
+Khi implement V2, summary được phép lưu **với điều kiện nghiêm ngặt**:
+- `is_summary = true` — bắt buộc
+- `metadata.parent_id` → trỏ memory gốc
+- `metadata.generated_by = "system"` — không phải user
+- Không được dùng trong RECALL và CHALLENGE
+- Mặc định bị loại khỏi retrieval trừ khi `include_summaries=true`
+- User phải approve trước khi persist (hoặc auto-expire)
 
 ## 12. Migration Strategy (Alembic)
 
 ### 12.1. Setup
 
-```bash
-pip install alembic
-alembic init alembic
+Migration files được đặt tại `app/db/migrations/` (không phải root `alembic/`).
+Cấu hình trong `alembic.ini`:
+
+```ini
+script_location = app/db/migrations
+```
+
+Cấu trúc đúng:
+```
+app/db/migrations/
+├── env.py              # Async migration runner
+├── script.py.mako      # Template
+└── versions/
+    └── 001_initial_schema.py
 ```
 
 ### 12.2. Cấu Hình `alembic.ini`
 
 ```ini
-sqlalchemy.url = postgresql+asyncpg://user:pass@localhost:5432/ai_person
+script_location = app/db/migrations
+prepend_sys_path = .
+# sqlalchemy.url được load từ .env qua app/config.py — không hardcode ở đây
 ```
 
 ### 12.3. Revision Đầu Tiên
 
+Revision đầu tiên đã được tạo thủ công tại `app/db/migrations/versions/001_initial_schema.py`.
+Với schema thay đổi sau này:
+
 ```bash
-alembic revision --autogenerate -m "initial_schema"
+alembic revision --autogenerate -m "describe_change"
 ```
 
 ### 12.4. Upgrade

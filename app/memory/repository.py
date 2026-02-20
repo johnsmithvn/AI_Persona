@@ -94,12 +94,17 @@ class MemoryRepository:
         return job
 
     async def get_pending_jobs(self, batch_size: int = 10) -> list[EmbeddingJob]:
-        """Fetch a batch of pending embedding jobs ordered by creation time."""
+        """Fetch a batch of pending embedding jobs ordered by creation time.
+
+        Uses SELECT FOR UPDATE SKIP LOCKED so that two concurrent worker processes
+        cannot claim the same job. Each worker atomically locks the rows it fetches.
+        """
         result = await self._session.execute(
             select(EmbeddingJob)
             .where(EmbeddingJob.status == "pending")
             .order_by(EmbeddingJob.created_at.asc())
             .limit(batch_size)
+            .with_for_update(skip_locked=True)
         )
         return list(result.scalars().all())
 
