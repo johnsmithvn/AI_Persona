@@ -67,24 +67,24 @@ Deliverables:
 #### Checklist
 
 ```
-[ ] Tạo cấu trúc thư mục đầy đủ
-[ ] docker-compose.yml với PostgreSQL 16 + pgvector
-[ ] docker compose up chạy thành công
-[ ] .env.example với tất cả biến cần thiết
-[ ] config.py load env đúng
-[ ] SQLAlchemy async session factory
-[ ] ORM models: MemoryRecord, EmbeddingJob, ReasoningLog
-[ ] ENUM types tạo đúng trong DB
-[ ] Alembic init + first migration
-[ ] alembic upgrade head chạy không lỗi
-[ ] Tất cả 7 index tạo đúng:
+[x] Tạo cấu trúc thư mục đầy đủ
+[x] docker-compose.yml với PostgreSQL 16 + pgvector
+[x] docker compose up chạy thành công
+[x] .env.example với tất cả biến cần thiết
+[x] config.py load env đúng
+[x] SQLAlchemy async session factory
+[x] ORM models: MemoryRecord, EmbeddingJob, ReasoningLog
+[x] ENUM types tạo đúng trong DB
+[x] Alembic init + first migration
+[x] alembic upgrade head chạy không lỗi
+[x] Tất cả 7 index tạo đúng:
       idx_memory_embedding (HNSW), idx_memory_created_at, idx_memory_content_type,
       idx_memory_metadata (GIN), idx_memory_checksum (UNIQUE),
       idx_embedding_jobs_status, idx_memory_embedding_model
-[ ] MemoryRepository.insert() hoạt động
-[ ] MemoryRepository.get_by_id() hoạt động
-[ ] MemoryRepository.get_by_checksum() hoạt động
-[ ] requirements.txt đầy đủ
+[ ] MemoryRepository.insert() hoạt động         ← pending end-to-end test
+[ ] MemoryRepository.get_by_id() hoạt động      ← pending end-to-end test
+[ ] MemoryRepository.get_by_checksum() hoạt động ← pending end-to-end test
+[x] requirements.txt đầy đủ
 ```
 
 #### docker-compose.yml (Reference)
@@ -128,22 +128,22 @@ volumes:
 #### Checklist
 
 ```
-[ ] MemoryCreateRequest schema validation
-[ ] MemoryResponse schema
-[ ] SHA256 checksum computation
-[ ] Duplicate detection (by checksum)
-[ ] MemoryService.save_memory() hoàn chỉnh
-[ ] EmbeddingJob tạo đúng khi save memory
-[ ] EmbeddingWorker gọi EmbeddingAdapter interface
-[ ] EmbeddingWorker update memory_records.embedding
-[ ] EmbeddingWorker xử lý retry (max 3 attempts)
-[ ] EmbeddingWorker xử lý failure gracefully
-[ ] Worker CLI chạy được: python -m workers.run_embedding
-[ ] POST /api/v1/memory trả response đúng
-[ ] GET /api/v1/memory/{id} trả response đúng
-[ ] DuplicateMemoryError được handle
-[ ] MemoryNotFoundError được handle
-[ ] End-to-end: insert → worker embed → verify embedding in DB
+[x] MemoryCreateRequest schema validation
+[x] MemoryResponse schema
+[x] SHA256 checksum computation
+[x] Duplicate detection (by checksum)
+[x] MemoryService.save_memory() hoàn chỉnh
+[x] EmbeddingJob tạo đúng khi save memory
+[x] EmbeddingWorker gọi EmbeddingAdapter interface
+[x] EmbeddingWorker update memory_records.embedding
+[x] EmbeddingWorker xử lý retry (max 3 attempts)
+[x] EmbeddingWorker xử lý failure gracefully
+[x] Worker CLI chạy được: python -m workers.run_embedding
+[ ] POST /api/v1/memory trả response đúng     ← pending end-to-end test
+[ ] GET /api/v1/memory/{id} trả response đúng ← pending end-to-end test
+[x] DuplicateMemoryError được handle
+[x] MemoryNotFoundError được handle
+[ ] End-to-end: insert → worker embed → verify embedding in DB ← pending
 ```
 
 #### Verification Script
@@ -178,21 +178,21 @@ volumes:
 #### Checklist
 
 ```
-[ ] SearchRequest schema (query, content_type, date range, limit, threshold)
-[ ] SearchResponse schema (results + total)
-[ ] Embed user query (qua EmbeddingAdapter)
-[ ] SQL query với cosine distance + HNSW
-[ ] Filter embedding_model đúng với model active
-[ ] Filter: content_type
-[ ] Filter: time range (start_date, end_date)
-[ ] Filter: metadata JSONB
-[ ] Distance threshold (< 0.7)
-[ ] Candidate pool (500)
-[ ] Ranking formula configurable theo mode
-[ ] Diversity guard (cosine > 0.95 → giữ 1)
-[ ] TokenGuard.check_budget() cơ bản
-[ ] POST /api/v1/search hoạt động
-[ ] Hybrid context strategy (top 5 full, next 10 summarized)
+[x] SearchRequest schema (query, content_type, date range, limit, threshold)
+[x] SearchResponse schema (results + total)
+[x] Embed user query (qua EmbeddingAdapter)
+[x] SQL query với cosine distance + HNSW
+[x] Filter embedding_model đúng với model active
+[x] Filter: content_type
+[x] Filter: time range (start_date, end_date)
+[x] Filter: metadata JSONB
+[x] Distance threshold (< 0.7)
+[x] Candidate pool (500)
+[x] Ranking formula configurable theo mode
+[x] Diversity guard (cosine > 0.95 → giữ 1)
+[x] TokenGuard.check_budget() cơ bản
+[ ] POST /api/v1/search hoạt động  ← pending end-to-end test
+[x] Hybrid context strategy: V1 Drop-only (không summarize — xem DATA_DESIGN 8.2)
 ```
 
 #### Ranking Formula Verification
@@ -228,27 +228,27 @@ Cần verify:
 #### Checklist
 
 ```
-[ ] QueryRequest schema (query, mode)
-[ ] QueryResponse schema (response, memory_used, token_usage, external_knowledge_used)
-[ ] default.yaml personality file
-[ ] ModeController.get_instruction('RECALL')
-[ ] ModeController.get_instruction('REFLECT')
-[ ] ModeController.get_instruction('CHALLENGE')
-[ ] ModeController.get_policy() cho mỗi mode
-[ ] PromptBuilder.build() — 4 phần không trộn
-[ ] LLMAdapter abstract class
-[ ] OpenAIAdapter.generate() hoạt động
-[ ] OpenAIAdapter.count_tokens() hoạt động
-[ ] ReasoningService.process_query() full flow
-[ ] Flow: query → retrieval → mode → prompt → LLM → response
-[ ] Memory_used trả về đúng list memory_ids
-[ ] reasoning_logs insert đúng
-[ ] POST /api/v1/query hoạt động
-[ ] RECALL mode: trả nguyên văn, không suy diễn
-[ ] REFLECT mode: tổng hợp nhiều memory, cite source
-[ ] CHALLENGE mode: chỉ ra mâu thuẫn, logic yếu
-[ ] Test 30 lượt chat: verify chất lượng
-[ ] Test: hệ thống nói "không biết" khi không có memory
+[x] QueryRequest schema (query, mode)
+[x] QueryResponse schema (response, memory_used, token_usage, external_knowledge_used)
+[x] default.yaml personality file
+[x] ModeController.get_instruction('RECALL')
+[x] ModeController.get_instruction('REFLECT')
+[x] ModeController.get_instruction('CHALLENGE')
+[x] ModeController.get_policy() cho mỗi mode
+[x] PromptBuilder.build() — 4 phần không trộn
+[x] LLMAdapter abstract class
+[ ] OpenAIAdapter.generate() hoạt động  ← pending end-to-end test (cần OPENAI_API_KEY)
+[ ] OpenAIAdapter.count_tokens() hoạt động ← pending
+[x] ReasoningService.process_query() full flow
+[x] Flow: query → retrieval → mode → prompt → LLM → response
+[x] Memory_used trả về đúng list memory_ids
+[x] reasoning_logs insert đúng
+[ ] POST /api/v1/query hoạt động  ← pending end-to-end test
+[ ] RECALL mode: trả nguyên văn, không suy diễn  ← pending
+[ ] REFLECT mode: tổng hợp nhiều memory, cite source  ← pending
+[ ] CHALLENGE mode: chỉ ra mâu thuẫn, logic yếu  ← pending
+[ ] Test 30 lượt chat: verify chất lượng  ← Phase 0 (Behavior Freeze)
+[ ] Test: hệ thống nói "không biết" khi không có memory  ← pending
 ```
 
 #### Test Scenarios
@@ -289,24 +289,24 @@ Cần verify:
 #### Checklist
 
 ```
-[ ] Structured logging (JSON format)
-[ ] Correlation ID middleware
-[ ] Log retrieval scores (debug)
-[ ] Log memory_ids used (audit)
-[ ] Log token usage (cost tracking)
-[ ] FastAPI startup event (DB connection)
-[ ] FastAPI shutdown event (cleanup)
-[ ] CORS configuration
-[ ] Error response format chuẩn hóa
-[ ] Không leak stacktrace
-[ ] deps.py: DB session injection
-[ ] deps.py: Config injection
-[ ] deps.py: LLM adapter injection
-[ ] README.md: setup guide
-[ ] README.md: API documentation
-[ ] Backup script / guide
-[ ] Benchmark: retrieval latency < 500ms cho 10K records
-[ ] Benchmark: end-to-end query < 3s
+[x] Structured logging (JSON format)
+[x] Correlation ID middleware
+[x] Log retrieval scores (debug)
+[x] Log memory_ids used (audit)
+[x] Log token usage (cost tracking)
+[x] FastAPI startup event (DB connection)
+[x] FastAPI shutdown event (cleanup)
+[x] CORS configuration
+[x] Error response format chuẩn hóa
+[x] Không leak stacktrace
+[x] deps.py: DB session injection
+[x] deps.py: Config injection
+[x] deps.py: LLM adapter injection
+[x] README.md: setup guide
+[x] README.md: API documentation
+[ ] Backup script / guide  ← P2
+[ ] Benchmark: retrieval latency < 500ms cho 10K records  ← P2
+[ ] Benchmark: end-to-end query < 3s  ← P2
 ```
 
 ---

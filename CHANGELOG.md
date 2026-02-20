@@ -11,6 +11,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.1.2] — 2026-02-20
+
+### Fixed
+- `ImportError: cannot import name 'TIMESTAMPTZ'` — replaced with `TIMESTAMP(timezone=True)` in `app/db/models.py` (all 5 timestamp columns: `memory_records.created_at`, `.updated_at`, `embedding_jobs.created_at`, `.completed_at`, `reasoning_logs.created_at`)
+- `alembic upgrade head` now runs successfully
+
+---
+
 ## [0.1.1] — 2026-02-20
 
 ### Fixed

@@ -1,16 +1,16 @@
 # TODO — AI Person (Bộ Não Thứ 2)
 
-> **Version:** v0.1.1  
-> **Last Updated:** 2026-02-20  
-> **Status:** Foundation complete → Ready for real-world run
+> **Version:** v0.1.2
+> **Last Updated:** 2026-02-20
+> **Status:** Migration done → API server running → manual end-to-end test next
 
 ---
 
 ## 🔥 P0 — Phải làm ngay (trước khi dùng thực tế)
 
 - [ ] **Setup `.env`** — copy `.env.example` → `.env`, điền `OPENAI_API_KEY`
-- [ ] **Chạy Docker** — `docker compose up -d` → verify PostgreSQL healthy
-- [ ] **Chạy migration** — `alembic upgrade head` → verify 7 indexes tạo đúng
+- [x] **Chạy Docker** — `docker compose up -d` ✅
+- [x] **Chạy migration** — `alembic upgrade head` ✅ — all 7 indexes created
   - `idx_memory_embedding` (HNSW)
   - `idx_memory_created_at`
   - `idx_memory_content_type`
