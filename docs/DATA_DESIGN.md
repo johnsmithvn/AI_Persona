@@ -1,11 +1,12 @@
 # DATA DESIGN — AI Person (Bộ Não Thứ 2)
 
 > **Project:** AI Person — Personal Memory-First AI System  
-> **Version:** V1 (Pre-release)  
-> **Last Updated:** 2026-02-20  
+> **Version:** v0.3.0  
+> **Last Updated:** 2026-02-21  
 > **Database:** PostgreSQL 16 + pgvector  
 > **ORM:** SQLAlchemy 2.0 (async)  
-> **Migration:** Alembic
+> **Migration:** Alembic  
+> **Data Contract:** [MEMORY_CONTRACT.md](MEMORY_CONTRACT.md)
 
 ---
 
@@ -22,41 +23,23 @@
 
 ---
 
-## 2. ENUM Types
+## 2. Column Types
 
-### 2.1. content_type
+### 2.1. content_type (VARCHAR — 6 giá trị cố định)
 
-Chuẩn hóa loại nội dung memory. Không cho phép free text.
+Chuẩn hóa loại nội dung memory. Validate ở Pydantic layer.
 
-```sql
-CREATE TYPE content_type AS ENUM (
-    'note',          -- ghi chú cá nhân
-    'conversation',  -- đoạn chat
-    'quote',         -- câu nói hay
-    'repo',          -- github / project link
-    'article',       -- blog / bài viết
-    'pdf',           -- file dài (đã extract text)
-    'transcript',    -- speech to text
-    'idea',          -- ý tưởng chợt nảy
-    'reflection',    -- suy nghĩ sâu
-    'log'            -- hệ thống
-);
-```
+| Giá trị | Dùng khi | Ý nghĩa |
+|---|---|---|
+| `note` | Ghi chú chung | Fallback trung tính |
+| `conversation` | Chat, bình luận | Nội dung dạng đối thoại |
+| `reflection` | Quan điểm cá nhân | Phục vụ REFLECT mode |
+| `idea` | Ý tưởng | Có thể phát triển |
+| `article` | Kiến thức, link, repo, video, nhạc | Nội dung từ bên ngoài |
+| `log` | Dữ kiện có cấu trúc | Chi tiêu, todo, tracking |
 
-### 2.2. source_type
-
-Xác định nguồn gốc dữ liệu — phục vụ audit.
-
-```sql
-CREATE TYPE source_type AS ENUM (
-    'manual',     -- user tự nhập
-    'api',        -- qua API
-    'import',     -- import batch
-    'ocr',        -- từ ảnh/scan
-    'whisper',    -- speech-to-text
-    'crawler'     -- crawl từ web
-);
-```
+> ⚠️ Đã gộp `quote`, `repo`, `pdf`, `transcript` vào `note` / `article` từ v0.3.0.  
+> ⚠️ `source_type` column đã bị xóa — thông tin nguồn gốc nằm trong `metadata.source`.
 
 ---
 
@@ -73,11 +56,10 @@ CREATE EXTENSION IF NOT EXISTS "vector";
 CREATE TABLE memory_records (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     raw_text        TEXT NOT NULL,
-    content_type    content_type NOT NULL DEFAULT 'note',
-    source_type     source_type NOT NULL DEFAULT 'manual',
+    content_type    VARCHAR(30) NOT NULL DEFAULT 'note',
     
-    -- Embedding
-    embedding       vector(1536),
+    -- Embedding (dimension configurable via EMBEDDING_DIMENSION env var)
+    embedding       vector(768),
     embedding_model VARCHAR(100),
     
     -- Integrity
@@ -87,7 +69,7 @@ CREATE TABLE memory_records (
     -- Scoring
     importance_score FLOAT CHECK (importance_score >= 0 AND importance_score <= 1),
     
-    -- Flexible metadata
+    -- Flexible metadata (Memory Contract V1 — see MEMORY_CONTRACT.md)
     metadata        JSONB DEFAULT '{}',
 
     is_archived BOOLEAN NOT NULL DEFAULT false,
@@ -106,47 +88,60 @@ CREATE TABLE memory_records (
 |---|---|---|---|
 | `id` | UUID | Primary key | An toàn, không đoán được |
 | `raw_text` | TEXT | Nội dung gốc | **BẤT BIẾN — không bao giờ UPDATE** |
-| `content_type` | ENUM | Loại nội dung | Chuẩn hóa, index được |
-| `source_type` | ENUM | Nguồn gốc | Phục vụ audit trail |
-| `embedding` | vector(1536) | Vector embedding | Khớp với OpenAI text-embedding-3-small |
+| `content_type` | VARCHAR(30) | Loại nội dung | 6 giá trị cố định, validate ở Pydantic |
+| `embedding` | vector(768) | Vector embedding | Dimension configurable qua `EMBEDDING_DIMENSION` env var |
 | `embedding_model` | VARCHAR(100) | Tên model đã dùng | Biết khi nào cần re-embed |
 | `checksum` | VARCHAR(64) | SHA256(raw_text) | Phát hiện sửa đổi, verify backup, chống duplicate |
 | `version` | INTEGER | Metadata version | raw_text bất biến, metadata có thể nâng version |
 | `importance_score` | FLOAT | Điểm quan trọng (0.0–1.0) | Ranking, token trimming, decay theo thời gian |
-| `metadata` | JSONB | Dữ liệu mở rộng | Tags, source_url, project, mood... |
+| `metadata` | JSONB | Dữ liệu mở rộng | **Memory Contract V1** — xem [MEMORY_CONTRACT.md](MEMORY_CONTRACT.md) |
 | `created_at` | TIMESTAMPTZ | Thời điểm tạo | Timezone-safe |
 | `updated_at` | TIMESTAMPTZ | Thời điểm cập nhật | Chỉ update khi metadata/embedding thay đổi |
 
-⚠️ Nếu lưu document dài (PDF, article),
-nên chunk trước khi insert để đảm bảo chất lượng embedding.
-V1 không tự động chunk.
-### 3.3. Ví Dụ metadata JSONB
+> ⚠️ `source_type` column đã bị xóa ở v0.3.0 — thông tin nguồn nằm trong `metadata.source`.
+
+### 3.3. metadata JSONB — Memory Contract V1
+
+Metadata tuân theo cấu trúc chuẩn hóa (chi tiết đầy đủ tại [MEMORY_CONTRACT.md](MEMORY_CONTRACT.md)):
 
 ```json
 {
-    "tags": ["architecture", "AI"],
-    "project": "ai-person",
-    "source_url": "https://...",
-    "mood": "focused",
-    "language": "vi"
+    "tags": ["ai", "code", "technical"],
+    "type": "expense",
+    "source": "cli",
+    "source_urls": ["https://..."],
+    "extra": {
+        "person_name": "Linh",
+        "amount": 45000,
+        "currency": "VND"
+    }
 }
 ```
+
+| Sub-field | Type | Mô tả |
+|---|---|---|
+| `tags` | `string[]` | Phân nhóm — 22 tags cố định (domain/format/style/system) |
+| `type` | `string` | Logic đặc biệt: `expense`, `todo`, `bookmark` |
+| `source` | `string` | Nguồn gốc: `cli`, `telegram`, `import`, `api` |
+| `source_urls` | `string[]` | Links liên quan |
+| `extra` | `object` | Mở rộng tự do — `person_name`, amount, etc. |
+
 ⚠️ Long Document Handling (Knowledge Base Use Case)
 
-Nếu content_type là 'pdf', 'article', hoặc document dài (> 2,000–3,000 tokens),
+Nếu `content_type` là `article` hoặc document dài (> 2,000–3,000 tokens),
 nên thực hiện chunking trước khi insert.
 
-Mỗi chunk là một memory_records riêng,
-metadata nên chứa:
+Mỗi chunk là một `memory_records` riêng, metadata nên chứa:
 
+```json
 {
   "parent_id": "<document_id>",
   "chunk_index": 1,
   "total_chunks": 20
 }
+```
 
-V1 không tự động chunk.
-Chunking là trách nhiệm của ingestion layer.
+V1 không tự động chunk. Chunking là trách nhiệm của ingestion layer.
 
 **Quy tắc metadata:**
 - Giới hạn size JSON (khuyến nghị < 4KB)
@@ -412,10 +407,16 @@ EXP(
 
 ```sql
 -- Filter theo tag
-WHERE metadata @> '{"tags": ["architecture"]}'
+WHERE metadata @> '{"tags": ["ai"]}'
 
--- Filter theo project
-WHERE metadata @> '{"project": "ai-person"}'
+-- Filter theo person_name
+WHERE metadata @> '{"extra": {"person_name": "Linh"}}'
+
+-- Filter theo metadata.type
+WHERE metadata @> '{"type": "expense"}'
+
+-- Filter theo source
+WHERE metadata @> '{"source": "cli"}'
 
 -- Phải có GIN index để nhanh
 ```
@@ -501,8 +502,9 @@ def deduplicate_memories(memories: list, threshold: float = 0.95) -> list:
 |---|---|---|---|
 | `id` | UUID | `uuid.UUID` | An toàn, không đoán được |
 | `raw_text` | TEXT | `str` | Không giới hạn kích thước |
-| `embedding` | vector(1536) | `list[float]` | Khớp OpenAI model dimension |
-| `metadata` | JSONB | `dict` | Filter linh hoạt, GIN index |
+| `content_type` | VARCHAR(30) | `str` | 6 giá trị cố định, validate ở Pydantic |
+| `embedding` | vector(768) | `list[float]` | Dimension configurable qua env var |
+| `metadata` | JSONB | `dict` | Memory Contract V1 — filter linh hoạt, GIN index |
 | `created_at` | TIMESTAMPTZ | `datetime` | Timezone-safe |
 | `checksum` | VARCHAR(64) | `str` | SHA256 hash = 64 hex chars |
 | `importance_score` | FLOAT | `float` | 0.0–1.0 |
@@ -727,16 +729,16 @@ alembic upgrade head
 ├─────────────────────────────────────────────┤
 │ PK  id              UUID                     │
 │     raw_text         TEXT (IMMUTABLE)         │
-│     content_type     content_type ENUM        │
-│     source_type      source_type ENUM         │
-│     embedding        vector(1536)             │
+│     content_type     VARCHAR(30)              │
+│     embedding        vector(768)              │
 │     embedding_model  VARCHAR(100)             │
 │     checksum         VARCHAR(64) UNIQUE       │
 │     version          INTEGER                  │
 │     importance_score FLOAT                    │
-│     metadata         JSONB                    │
+│     metadata         JSONB (Contract V1)      │
 │     is_archived      BOOLEAN                  │
 │     exclude_from_retrieval BOOLEAN            │
+│     is_summary       BOOLEAN                  │
 │     created_at       TIMESTAMPTZ              │
 │     updated_at       TIMESTAMPTZ              │
 ├─────────────────────────────────────────────┤
@@ -787,6 +789,7 @@ alembic upgrade head
 
 | Tài liệu | Mô tả |
 |---|---|
+| [MEMORY_CONTRACT.md](MEMORY_CONTRACT.md) | **Memory Contract V1** — chuẩn data import, tag registry |
 | [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) | Kiến trúc tổng thể, triết lý, flows |
 | [CODEBASE_STRUCTURE.md](CODEBASE_STRUCTURE.md) | Cấu trúc thư mục, file responsibilities |
 | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Roadmap, checklist triển khai |

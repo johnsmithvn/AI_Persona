@@ -1,4 +1,4 @@
-# API Documentation — AI Person v0.2.0
+# API Documentation — AI Person v0.3.0
 
 > **Base URL:** `http://localhost:8000`  
 > **OpenAPI (Swagger):** `http://localhost:8000/docs`  
@@ -31,11 +31,10 @@ Lưu một memory mới vào hệ thống. Embedding được tạo **bất đ�
 {
     "raw_text": "LoRA giúp fine-tune LLM hiệu quả hơn full fine-tuning rất nhiều.",
     "content_type": "note",
-    "source_type": "manual",
     "importance_score": 0.8,
     "metadata": {
-        "tags": ["ai", "fine-tuning"],
-        "context": "Nghiên cứu kỹ thuật"
+        "tags": ["ai", "technical"],
+        "source": "api"
     }
 }
 ```
@@ -43,10 +42,11 @@ Lưu một memory mới vào hệ thống. Embedding được tạo **bất đ�
 | Field | Type | Required | Default | Ghi Chú |
 |---|---|---|---|---|
 | `raw_text` | `string` | ✅ | — | Min 1 char. **Immutable** sau khi insert |
-| `content_type` | `string` | ❌ | `"note"` | Enum: `note`, `conversation`, `quote`, `repo`, `article`, `pdf`, `transcript`, `idea`, `reflection`, `log` |
-| `source_type` | `string` | ❌ | `"manual"` | Enum: `manual`, `api`, `import`, `ocr`, `whisper`, `crawler` |
+| `content_type` | `string` | ❌ | `"note"` | 6 giá trị: `note`, `conversation`, `reflection`, `idea`, `article`, `log` |
 | `importance_score` | `float` | ❌ | `null` | Range: `0.0` – `1.0` |
-| `metadata` | `object` | ❌ | `{}` | Arbitrary JSONB |
+| `metadata` | `object` | ❌ | `{}` | Memory Contract V1 — xem [MEMORY_CONTRACT.md](../docs/MEMORY_CONTRACT.md) |
+
+> ⚠️ `source_type` đã bị xóa từ v0.3.0. Nguồn gốc data lưu trong `metadata.source`.
 
 **Response (201 Created):**
 
@@ -55,10 +55,9 @@ Lưu một memory mới vào hệ thống. Embedding được tạo **bất đ�
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "raw_text": "LoRA giúp fine-tune LLM hiệu quả hơn full fine-tuning rất nhiều.",
     "content_type": "note",
-    "source_type": "manual",
     "checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4...",
     "importance_score": 0.8,
-    "metadata": {"tags": ["ai", "fine-tuning"], "context": "Nghiên cứu kỹ thuật"},
+    "metadata": {"tags": ["ai", "technical"], "source": "api"},
     "is_archived": false,
     "exclude_from_retrieval": false,
     "is_summary": false,
@@ -148,12 +147,12 @@ Tìm kiếm memory bằng ngôn ngữ tự nhiên. Kết quả được xếp h�
 | Field | Type | Required | Default | Ghi Chú |
 |---|---|---|---|---|
 | `query` | `string` | ✅ | — | Natural language search |
-| `content_type` | `string` | ❌ | `null` | Filter theo loại. Enum: `note`, `conversation`, `quote`, `repo`, `article`, `pdf`, `transcript`, `idea`, `reflection`, `log` |
+| `content_type` | `string` | ❌ | `null` | Filter theo loại. 6 giá trị: `note`, `conversation`, `reflection`, `idea`, `article`, `log` |
 | `start_date` | `datetime` | ❌ | `null` | ISO 8601 |
 | `end_date` | `datetime` | ❌ | `null` | ISO 8601 |
 | `limit` | `int` | ❌ | `20` | Range: `1` – `100` |
 | `threshold` | `float` | ❌ | `0.7` | Cosine distance threshold (thấp = giống hơn) |
-| `metadata_filter` | `object` | ❌ | `null` | JSONB containment filter (`@>`) |
+| `metadata_filter` | `object` | ❌ | `null` | JSONB containment filter (`@>`). Ví dụ: `{"tags": ["ai"]}`, `{"extra": {"person_name": "Linh"}}` |
 | `include_summaries` | `bool` | ❌ | `false` | Include `is_summary=true` records (V1: luôn `false`) |
 
 **Response (200 OK):**

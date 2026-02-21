@@ -1,6 +1,11 @@
 """
 Pydantic schemas for Memory endpoints.
 These define the API contract — separate from ORM models.
+
+Memory Contract V1:
+- content_type: 6 fixed values (note, conversation, reflection, idea, article, log)
+- source info lives in metadata.source (not a top-level field)
+- metadata structure: tags, type, source, source_urls, extra.person_name
 """
 
 import uuid
@@ -9,28 +14,21 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+# ─── Memory Contract V1: Fixed registries ────────────────────────────────────
+VALID_CONTENT_TYPES = {"note", "conversation", "reflection", "idea", "article", "log"}
+
 
 class MemoryCreateRequest(BaseModel):
     raw_text: str = Field(..., min_length=1, description="Text content to store. Immutable after insert.")
-    content_type: str = Field(default="note", description="One of: note, conversation, quote, repo, article, pdf, transcript, idea, reflection, log")
-    source_type: str = Field(default="manual", description="One of: manual, api, import, ocr, whisper, crawler")
+    content_type: str = Field(default="note", description="One of: note, conversation, reflection, idea, article, log")
     importance_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("content_type")
     @classmethod
     def validate_content_type(cls, v: str) -> str:
-        allowed = {"note", "conversation", "quote", "repo", "article", "pdf", "transcript", "idea", "reflection", "log"}
-        if v not in allowed:
-            raise ValueError(f"content_type must be one of: {', '.join(sorted(allowed))}")
-        return v
-
-    @field_validator("source_type")
-    @classmethod
-    def validate_source_type(cls, v: str) -> str:
-        allowed = {"manual", "api", "import", "ocr", "whisper", "crawler"}
-        if v not in allowed:
-            raise ValueError(f"source_type must be one of: {', '.join(sorted(allowed))}")
+        if v not in VALID_CONTENT_TYPES:
+            raise ValueError(f"content_type must be one of: {', '.join(sorted(VALID_CONTENT_TYPES))}")
         return v
 
 
@@ -38,7 +36,6 @@ class MemoryResponse(BaseModel):
     id: uuid.UUID
     raw_text: str
     content_type: str
-    source_type: str
     checksum: str
     importance_score: Optional[float]
     metadata: dict[str, Any]

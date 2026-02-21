@@ -31,7 +31,6 @@ def _to_response(record: MemoryRecord) -> MemoryResponse:
         id=record.id,
         raw_text=record.raw_text,
         content_type=record.content_type,
-        source_type=record.source_type,
         checksum=record.checksum,
         importance_score=record.importance_score,
         metadata=record.metadata_ or {},
@@ -72,7 +71,6 @@ class MemoryService:
         record = MemoryRecord(
             raw_text=request.raw_text,
             content_type=request.content_type,
-            source_type=request.source_type,
             checksum=checksum,
             importance_score=request.importance_score,
             metadata_=request.metadata,

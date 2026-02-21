@@ -14,7 +14,7 @@ chia bảng rõ ràng, phân lớp rõ, có giải thích, có ví dụ đầy �
 Mục tiêu:  
 ✔ Phục vụ hỏi đáp tự nhiên  
 ✔ Không over-engineer  
-✔ Không lẫn type – tag – entity  
+✔ Không lẫn type – tag – person_name  
 ✔ Không cần sửa core
 
 * * *
@@ -26,7 +26,7 @@ I. TRIẾT LÝ THIẾT KẾ
 2.  `content_type` = hình thái dữ liệu (ít và cố định).
 3.  `metadata.type` = logic đặc biệt (rất hạn chế).
 4.  `tags` = phân nhóm nội dung (registry cố định).
-5.  `extra.entity` = dùng cho memory về người (chỉ filter, không structured DB).
+5.  `extra.person_name` = dùng cho memory về người (chỉ filter, không structured DB).
 
 * * *
 
@@ -165,7 +165,7 @@ undefined
 
 * * *
 
-5️⃣ metadata.extra.entity (ENTITY FILTER)
+5️⃣ metadata.extra.person_name (person_name FILTER)
 -----------------------------------------
 
 Dùng khi memory về người.
@@ -224,7 +224,7 @@ VIII. NGUYÊN TẮC VÀNG
 
 1.  Mỗi fact = một memory riêng.
 2.  Không nhét nhiều thông tin khác loại vào một record.
-3.  Entity chỉ dùng để filter.
+3.  person_name chỉ dùng để filter.
 4.  Tag chỉ dùng để phân nhóm.
 5.  Không thêm content\_type mới.
 6.  Không thêm field top-level mới.
@@ -241,8 +241,8 @@ Ví dụ hỏi:
 
 Flow:
 
-1.  Detect entity = Linh
-2.  Filter metadata.extra.entity == "Linh"
+1.  Detect person_name = Linh
+2.  Filter metadata.extra.person_name == "Linh"
 3.  Semantic match
 4.  Tổng hợp
 5.  Không bịa nếu không có memory
@@ -256,7 +256,7 @@ Giờ schema đã chuẩn hóa hoàn chỉnh.
 Bước tiếp theo tao có thể làm:
 
 *   Thiết kế CLI interactive flow dựa trên schema này
-*   Hoặc thiết kế logic entity-aware retrieval để không sót và không bịa
+*   Hoặc thiết kế logic person_name-aware retrieval để không sót và không bịa
 
 Mày muốn làm phần nào trước?
 

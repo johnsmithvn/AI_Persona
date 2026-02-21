@@ -63,7 +63,6 @@ class MemoryRecord(Base):
     # Immutable content
     raw_text: Mapped[str] = mapped_column(Text, nullable=False)
     content_type: Mapped[str] = mapped_column(String(30), nullable=False, default="note")
-    source_type: Mapped[str] = mapped_column(String(30), nullable=False, default="manual")
 
     # Embedding — may be NULL until worker processes the job
     embedding: Mapped[Optional[list]] = mapped_column(Vector(_EMBEDDING_DIMENSION), nullable=True)
