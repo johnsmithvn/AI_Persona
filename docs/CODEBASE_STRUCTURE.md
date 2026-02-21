@@ -1,7 +1,7 @@
 # CODEBASE STRUCTURE — AI Person (Bộ Não Thứ 2)
 
 > **Project:** AI Person — Personal Memory-First AI System  
-> **Version:** V1 (Pre-release)  
+> **Version:** V1 (v0.2.0)  
 > **Last Updated:** 2026-02-21  
 > **Framework:** FastAPI + SQLAlchemy 2.0 (async)  
 > **Language:** Python 3.11+
@@ -50,11 +50,12 @@ ai-person/
 │   │
 │   ├── llm/                          # LLM abstraction — adapter pattern
 │   │   ├── __init__.py
-│   │   ├── adapter.py                # LLMAdapter base class
-│   │   ├── openai_adapter.py         # OpenAI implementation
-│   │   ├── embedding_adapter.py
-│   │   ├── openai_embedding_adapter.py
-│   │   └── local_adapter.py          # Local model (LM Studio) — V2
+│   │   ├── adapter.py                # LLMAdapter abstract base
+│   │   ├── embedding_adapter.py      # EmbeddingAdapter abstract base
+│   │   ├── openai_adapter.py         # OpenAI LLM implementation
+│   │   ├── openai_embedding_adapter.py  # OpenAI embedding
+│   │   ├── lmstudio_adapter.py       # LM Studio LLM (local)
+│   │   └── lmstudio_embedding_adapter.py  # LM Studio embedding (local)
 │   │
 │   ├── core/                         # Core policies & configuration
 │   │   ├── __init__.py
@@ -172,7 +173,6 @@ Reasoning → KHÔNG query DB trực tiếp
 # Trách nhiệm:
 # - Load .env
 # - Định nghĩa Settings class (Pydantic BaseSettings)
-# - DATABASE_URL, OPENAI_API_KEY, EMBEDDING_MODEL, LLM_MODEL
 # - Tất cả config tập trung 1 nơi
 ```
 
@@ -181,21 +181,25 @@ Reasoning → KHÔNG query DB trực tiếp
 | Variable | Mô tả | Ví dụ |
 |---|---|---|
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql+asyncpg://user:pass@localhost/ai_person` |
-| `OPENAI_API_KEY` | API key cho embedding + LLM | `sk-...` |
+| `LLM_PROVIDER` | Provider: `"openai"` hoặc `"lmstudio"` | `lmstudio` |
+| `LMSTUDIO_BASE_URL` | LM Studio server URL | `http://localhost:1234/v1` |
+| `OPENAI_API_KEY` | API key (chỉ cần nếu provider=openai) | `sk-...` |
 | `EMBEDDING_MODEL` | Tên model embedding | `text-embedding-3-small` |
 | `LLM_MODEL` | Tên model LLM | `gpt-4.1-mini` |
 | `EMBEDDING_DIMENSION` | Dimension vector | `1536` |
 | `MAX_CONTEXT_TOKENS` | Token budget tối đa | `3000` |
 | `LOG_LEVEL` | Log level | `INFO` |
+| `DEBUG` | Enable Swagger UI | `false` |
 
-### 3.3. `app/deps.py` — Dependency Injection
+### 3.3. `app/deps.py` — Dependency Injection (Provider Factory)
 
 ```python
 # Trách nhiệm:
-# - Cung cấp DB session qua FastAPI Depends()
-# - Cung cấp Config instance
-# - Cung cấp LLM adapter instance
-# - Giúp test dễ (swap dependency)
+# - Factory pattern: chọn adapter dựa trên LLM_PROVIDER setting
+# - get_llm_adapter() → OpenAIAdapter hoặc LMStudioAdapter
+# - get_embedding_adapter() → OpenAIEmbeddingAdapter hoặc LMStudioEmbeddingAdapter
+# - Lazy import: chỉ import adapter được chọn
+# - Singleton caching qua @lru_cache
 ```
 
 ---
@@ -463,26 +467,34 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 
 ### 3.9. `app/llm/` — LLM Abstraction
 
-#### `app/llm/adapter.py`
+#### `app/llm/adapter.py` + `app/llm/embedding_adapter.py`
 
 ```python
-# Abstract Class: LLMAdapter
-#
-# Methods:
-# - generate(prompt, config) → LLMResponse
-# - count_tokens(text) → int
+# Abstract Classes:
+# - LLMAdapter: generate(prompt, config) → LLMResponse, count_tokens(text) → int
+# - EmbeddingAdapter: embed(text) → list[float], embed_batch(texts) → list[list[float]]
 #
 # LLM adapter KHÔNG biết gì về memory structure.
 # Chỉ nhận prompt → trả response.
 ```
 
-#### `app/llm/openai_adapter.py`
+#### `app/llm/openai_adapter.py` + `app/llm/openai_embedding_adapter.py`
 
 ```python
-# Class: OpenAIAdapter(LLMAdapter)
-#
-# V1 implementation dùng OpenAI API
-# Model: gpt-4.1-mini (cấu hình từ config)
+# Class: OpenAIAdapter(LLMAdapter), OpenAIEmbeddingAdapter(EmbeddingAdapter)
+# Dùng OpenAI API qua openai SDK
+# Cần OPENAI_API_KEY
+```
+
+#### `app/llm/lmstudio_adapter.py` + `app/llm/lmstudio_embedding_adapter.py`
+
+```python
+# Class: LMStudioAdapter(LLMAdapter), LMStudioEmbeddingAdapter(EmbeddingAdapter)
+# Dùng LM Studio local model qua OpenAI-compatible API
+# base_url = LMSTUDIO_BASE_URL (default: http://localhost:1234/v1)
+# api_key = "lm-studio" (placeholder, LM Studio không cần key thật)
+# Token counting: cl100k_base (approximate)
+# Xử lý usage=None edge case
 ```
 
 ---
@@ -628,21 +640,27 @@ main.py
   ├── api/memory.py     → schemas/memory.py, memory/service.py
   ├── api/search.py     → schemas/search.py, retrieval/search.py
   ├── api/query.py      → schemas/query.py, reasoning/service.py
-  └── deps.py           → db/session.py, config.py, llm/adapter.py
+  └── deps.py           → config.py, llm/adapter.py (factory switch)
+
+deps.py (provider factory)
+  ├── LLM_PROVIDER=openai   → llm/openai_adapter.py, llm/openai_embedding_adapter.py
+  └── LLM_PROVIDER=lmstudio → llm/lmstudio_adapter.py, llm/lmstudio_embedding_adapter.py
 
 memory/service.py       → memory/repository.py, db/models.py
 memory/repository.py    → db/session.py, db/models.py
-memory/embedding_worker → llm/embedding_adapter.py
-memory/embedding_worker → llm/openai_embedding_adapter.py
+memory/embedding_worker → llm/embedding_adapter.py (via deps.py)
 
 retrieval/search.py     → db/session.py, retrieval/ranking.py
 retrieval/ranking.py    → core/token_guard.py
 
 reasoning/service.py    → retrieval/search.py, reasoning/mode_controller.py,
-                          reasoning/prompt_builder.py, llm/adapter.py, 
+                          reasoning/prompt_builder.py, llm/adapter.py,
                           core/token_guard.py, logging/logger.py
 
-llm/openai_adapter.py   → llm/adapter.py (inherits)
+llm/openai_adapter.py       → llm/adapter.py (inherits)
+llm/lmstudio_adapter.py     → llm/adapter.py (inherits)
+llm/openai_embedding_adapter.py   → llm/embedding_adapter.py (inherits)
+llm/lmstudio_embedding_adapter.py → llm/embedding_adapter.py (inherits)
 ```
 
 **Quy tắc import:**
@@ -651,6 +669,7 @@ llm/openai_adapter.py   → llm/adapter.py (inherits)
 - `memory/` → KHÔNG import `llm/` hoặc `reasoning/`
 - `llm/` → KHÔNG import bất kỳ layer nào khác
 - `db/` → KHÔNG import business logic
+- `deps.py` → lazy import adapter dựa trên provider config
 
 ---
 

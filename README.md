@@ -1,6 +1,6 @@
 # AI Person — Bộ Não Thứ 2
 
-> **Personal Memory-First AI System** — Version 0.1.0
+> **Personal Memory-First AI System** — Version 0.2.0
 
 A production-grade personal AI that stores your thinking history and reasons over it. Not a chatbot. Not a RAG demo. A long-term memory infrastructure designed to live alongside you for 5–10 years.
 
@@ -17,7 +17,9 @@ Memory Infrastructure   →   Retrieval Engine   →   Reasoning Layer
               PostgreSQL 16 + pgvector (HNSW)
 ```
 
-**3 modes:** `RECALL` (fetch what I wrote) · `REFLECT` (synthesize patterns) · `CHALLENGE` (find contradictions)
+**5 modes:** `RECALL` (fetch verbatim) · `SYNTHESIZE` (combine knowledge) · `REFLECT` (analyze evolution) · `CHALLENGE` (find contradictions) · `EXPAND` (supplement with external knowledge)
+
+**LLM Provider:** OpenAI API hoặc **LM Studio** (local model) — chuyển đổi qua 1 env var.
 
 ---
 
@@ -27,7 +29,9 @@ Memory Infrastructure   →   Retrieval Engine   →   Reasoning Layer
 
 - Python 3.11+
 - Docker + Docker Compose
-- OpenAI API key
+- **Một trong hai:**
+  - OpenAI API key, hoặc
+  - [LM Studio](https://lmstudio.ai/) chạy local model
 
 ### 2. Setup
 
@@ -45,7 +49,7 @@ pip install -r requirements.txt
 
 # Configure environment
 copy .env.example .env
-# Edit .env: set OPENAI_API_KEY
+# Edit .env — xem hướng dẫn bên dưới
 ```
 
 ### 3. Start Database
@@ -72,7 +76,69 @@ uvicorn app.main:app --reload --port 8000
 python -m workers.run_embedding
 ```
 
-API docs available at: `http://localhost:8000/docs` (only when `DEBUG=true`)
+API docs: `http://localhost:8000/docs` (chỉ khi `DEBUG=true`)
+
+---
+
+## ⚙️ Cấu Hình LLM Provider
+
+Hệ thống hỗ trợ 2 provider, chuyển đổi qua biến `LLM_PROVIDER` trong `.env`.
+
+### Option A: LM Studio (Local — Recommended cho dev)
+
+```env
+LLM_PROVIDER=lmstudio
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+
+# Đổi tên model cho khớp với model bạn load trong LM Studio
+LLM_MODEL=your-chat-model-name
+EMBEDDING_MODEL=your-embedding-model-name
+EMBEDDING_DIMENSION=768                    # Đổi theo dimension model embedding
+```
+
+**Cách setup LM Studio:**
+
+1. Mở LM Studio → load **2 models**:
+   - 1 **chat model** (vd: `llama-3.2-3b-instruct`, `qwen2.5-7b-instruct`)
+   - 1 **embedding model** (vd: `nomic-embed-text-v1.5`, `bge-small-en-v1.5`)
+2. Start server trong LM Studio (default port: `1234`)
+3. Verify: `curl http://localhost:1234/v1/models` — phải thấy danh sách models
+4. Copy tên model chính xác vào `LLM_MODEL` và `EMBEDDING_MODEL` trong `.env`
+
+> ⚠️ **EMBEDDING_DIMENSION** phải match với model bạn dùng:
+> - `nomic-embed-text-v1.5` → `768`
+> - `bge-small-en-v1.5` → `384`
+> - `text-embedding-3-small` (OpenAI) → `1536`
+
+### Option B: OpenAI API
+
+```env
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-your-real-key-here
+
+LLM_MODEL=gpt-4.1-mini
+EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_DIMENSION=1536
+```
+
+---
+
+## ⚙️ Tất Cả Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | `postgresql+asyncpg://...` | PostgreSQL connection string |
+| `LLM_PROVIDER` | `openai` | `"openai"` hoặc `"lmstudio"` |
+| `LMSTUDIO_BASE_URL` | `http://localhost:1234/v1` | LM Studio server URL |
+| `OPENAI_API_KEY` | *(required nếu openai)* | OpenAI API key |
+| `EMBEDDING_MODEL` | `text-embedding-3-small` | Tên embedding model |
+| `EMBEDDING_DIMENSION` | `1536` | Vector dimension |
+| `LLM_MODEL` | `gpt-4.1-mini` | Tên chat/LLM model |
+| `MAX_CONTEXT_TOKENS` | `3000` | Token budget cho memory context |
+| `LOG_LEVEL` | `INFO` | Log level |
+| `DEBUG` | `false` | Enable Swagger UI + debug mode |
+| `EMBEDDING_WORKER_INTERVAL_SECONDS` | `5` | Worker polling interval |
+| `EMBEDDING_WORKER_BATCH_SIZE` | `10` | Batch size cho embedding worker |
 
 ---
 
@@ -84,7 +150,7 @@ API docs available at: `http://localhost:8000/docs` (only when `DEBUG=true`)
 | `GET` | `/api/v1/memory/{id}` | Get memory by ID |
 | `PATCH` | `/api/v1/memory/{id}/archive` | Soft-archive (selective forgetting) |
 | `POST` | `/api/v1/search` | Semantic search |
-| `POST` | `/api/v1/query` | Reasoning query |
+| `POST` | `/api/v1/query` | Reasoning query (5 modes) |
 | `GET` | `/health` | Health check |
 
 ### Save Memory
@@ -110,15 +176,33 @@ curl -X POST http://localhost:8000/api/v1/search \
   }'
 ```
 
-### Reasoning Query
+### Reasoning Query (5 modes)
 
 ```bash
+# RECALL — trả nguyên văn
 curl -X POST http://localhost:8000/api/v1/query \
   -H "Content-Type: application/json" \
-  -d '{
-    "query": "Tư duy của tôi về AI thay đổi thế nào theo thời gian?",
-    "mode": "REFLECT"
-  }'
+  -d '{"query": "Tao từng viết gì về LoRA?", "mode": "RECALL"}'
+
+# SYNTHESIZE — tổng hợp từ nhiều memory
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Tổng hợp hiểu biết về fine-tuning", "mode": "SYNTHESIZE"}'
+
+# REFLECT — phân tích evolution
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Tư duy của tao về AI thay đổi thế nào?", "mode": "REFLECT"}'
+
+# CHALLENGE — phản biện
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Tìm mâu thuẫn trong suy nghĩ về ML của tao", "mode": "CHALLENGE"}'
+
+# EXPAND — bổ sung external knowledge
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "So sánh hiểu biết của tao với industry best practice", "mode": "EXPAND"}'
 ```
 
 ---
@@ -132,19 +216,25 @@ AI_Person/
 │   ├── core/             # Personality, prompts, token guard
 │   ├── db/               # SQLAlchemy models + Alembic migrations
 │   ├── exceptions/       # Custom exception classes + handlers
-│   ├── llm/              # LLM + Embedding adapters (swappable)
+│   ├── llm/              # LLM + Embedding adapters (OpenAI + LM Studio)
+│   │   ├── adapter.py              # Abstract LLMAdapter
+│   │   ├── embedding_adapter.py    # Abstract EmbeddingAdapter
+│   │   ├── openai_adapter.py       # OpenAI LLM
+│   │   ├── openai_embedding_adapter.py  # OpenAI embedding
+│   │   ├── lmstudio_adapter.py     # LM Studio LLM (NEW)
+│   │   └── lmstudio_embedding_adapter.py  # LM Studio embedding (NEW)
 │   ├── logging/          # Structured JSON logger
 │   ├── memory/           # Save + checksum + embedding job creation
 │   ├── reasoning/        # Mode controller + prompt builder + orchestrator
 │   ├── retrieval/        # Semantic search + ranking
 │   ├── schemas/          # Pydantic request/response models
 │   ├── config.py         # Settings (all env vars)
-│   ├── deps.py           # Dependency injection
+│   ├── deps.py           # DI factory (provider switching)
 │   └── main.py           # FastAPI app entry point
 ├── workers/
 │   └── run_embedding.py  # Background embedding CLI
 ├── personalities/
-│   └── default.yaml      # AI personality config
+│   └── default.yaml      # AI personality config (5-mode hints)
 ├── docs/                 # Architecture documentation
 ├── docker-compose.yml
 ├── requirements.txt
@@ -153,31 +243,14 @@ AI_Person/
 
 ---
 
-## ⚙️ Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://...` | PostgreSQL connection string |
-| `OPENAI_API_KEY` | *(required)* | OpenAI API key |
-| `EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model name |
-| `LLM_MODEL` | `gpt-4.1-mini` | LLM model name |
-| `MAX_CONTEXT_TOKENS` | `3000` | Token budget for memory context |
-| `LOG_LEVEL` | `INFO` | Log level |
-| `DEBUG` | `false` | Enable debug mode + API docs |
-| `EMBEDDING_WORKER_INTERVAL_SECONDS` | `5` | Worker polling interval |
-
----
-
 ## 🌿 Git Workflow
 
 ```
 main                    ← production-ready
 ├── develop             ← integration
-│   ├── feature/phase1-foundation
-│   ├── feature/phase2-memory
-│   ├── feature/phase3-retrieval
-│   ├── feature/phase4-reasoning
-│   └── feature/phase5-polish
+│   ├── feat/lmstudio-adapter
+│   ├── fix/audit-gaps
+│   └── feature/phase1–5
 ```
 
 ---
@@ -190,9 +263,10 @@ main                    ← production-ready
 | [DATA_DESIGN.md](docs/DATA_DESIGN.md) | DB schema, indexes, retrieval SQL |
 | [CODEBASE_STRUCTURE.md](docs/CODEBASE_STRUCTURE.md) | File responsibilities |
 | [IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) | Phase roadmap + checklists |
+| [API_DOCS.md](docs/API_DOCS.md) | Full API reference (endpoints, schemas, errors, cURL) |
 
 ---
 
 ## 📦 Version
 
-Current: **v0.1.0** — Phase 1 Foundation (Database + Memory Infrastructure)
+Current: **v0.2.0** — Full 5-mode system + LM Studio local model support

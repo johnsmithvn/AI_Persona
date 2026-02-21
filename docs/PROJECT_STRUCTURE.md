@@ -1,10 +1,10 @@
 # PROJECT STRUCTURE — AI Person (Bộ Não Thứ 2)
 
 > **Project:** AI Person — Personal Memory-First AI System  
-> **Version:** V1 (Pre-release)  
-> **Last Updated:** 2026-02-20  
+> **Version:** V1 (v0.2.0)  
+> **Last Updated:** 2026-02-21  
 > **Author:** tunghnhn9x@gmail.com  
-> **Status:** Design Finalized → Ready for Implementation
+> **Status:** Implementation In Progress
 
 ---
 
@@ -127,7 +127,7 @@ Mode không tạo ra AI khác nhau. Mode là **cấu hình quyền hạn** cho c
 │                       │    │               │                  │
 │                       │    │  ┌────────────▼───────────────┐  │
 │                       │    │  │  LLM Adapter               │  │
-│                       │    │  │  (OpenAI / Local / Gemini)  │  │
+│                       │    │  │  (OpenAI / LM Studio)       │  │
 │                       │    │  └────────────────────────────┘  │
 └──────────────────────┘    └──────────────────────────────────┘
                │                          │
@@ -450,8 +450,8 @@ ReasoningService.process_query()
 | **Database** | PostgreSQL 16 | Stable, transaction safe, backup chuẩn |
 | **Vector Search** | pgvector (HNSW index) | Không lock-in, đủ mạnh cho semantic search |
 | **ORM** | SQLAlchemy 2.0 (async) | Typed, mature, tách repository dễ |
-| **Embedding** | OpenAI text-embedding-3-small | Rẻ, đủ tốt cho V1 |
-| **LLM** | GPT-4.1-mini (qua adapter) | V1 nhanh, sau swap được |
+| **Embedding** | OpenAI text-embedding-3-small / LM Studio local | Swap qua `LLM_PROVIDER` env var |
+| **LLM** | GPT-4.1-mini / LM Studio local | Swap qua `LLM_PROVIDER` env var |
 | **Config** | python-dotenv | Đơn giản, đủ dùng |
 | **Personality** | YAML files | Dễ edit, version control được |
 | **Migration** | Alembic | Chuẩn production cho SQLAlchemy |

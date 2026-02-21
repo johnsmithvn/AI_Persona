@@ -1,4 +1,4 @@
-# API Documentation — AI Person v0.1.2
+# API Documentation — AI Person v0.2.0
 
 > **Base URL:** `http://localhost:8000`  
 > **OpenAPI (Swagger):** `http://localhost:8000/docs`  
@@ -148,12 +148,12 @@ Tìm kiếm memory bằng ngôn ngữ tự nhiên. Kết quả được xếp h�
 | Field | Type | Required | Default | Ghi Chú |
 |---|---|---|---|---|
 | `query` | `string` | ✅ | — | Natural language search |
-| `content_type` | `string` | ❌ | `null` | Filter theo loại. ⚠️ **Validation Gap:** Không validate enum |
+| `content_type` | `string` | ❌ | `null` | Filter theo loại. Enum: `note`, `conversation`, `quote`, `repo`, `article`, `pdf`, `transcript`, `idea`, `reflection`, `log` |
 | `start_date` | `datetime` | ❌ | `null` | ISO 8601 |
 | `end_date` | `datetime` | ❌ | `null` | ISO 8601 |
 | `limit` | `int` | ❌ | `20` | Range: `1` – `100` |
 | `threshold` | `float` | ❌ | `0.7` | Cosine distance threshold (thấp = giống hơn) |
-| `metadata_filter` | `object` | ❌ | `null` | JSONB filter. ⚠️ **NOT_IMPLEMENTED in V1 SQL** — accepted but ignored |
+| `metadata_filter` | `object` | ❌ | `null` | JSONB containment filter (`@>`) |
 | `include_summaries` | `bool` | ❌ | `false` | Include `is_summary=true` records (V1: luôn `false`) |
 
 **Response (200 OK):**
@@ -247,7 +247,7 @@ Full reasoning pipeline:
 |---|---|
 | `response` | LLM-generated answer |
 | `memory_used` | List UUID của memory đã dùng làm context |
-| `token_usage` | OpenAI token consumption |
+| `token_usage` | LLM token consumption (cả OpenAI lẫn LM Studio) |
 | `external_knowledge_used` | `true` nếu LLM dùng external knowledge |
 | `latency_ms` | Toàn bộ pipeline latency |
 

@@ -1,10 +1,10 @@
 # IMPLEMENTATION PLAN — AI Person (Bộ Não Thứ 2)
 
 > **Project:** AI Person — Personal Memory-First AI System  
-> **Version:** V1 (Pre-release)  
-> **Last Updated:** 2026-02-20  
+> **Version:** V1 (v0.2.0)  
+> **Last Updated:** 2026-02-21  
 > **Estimated Timeline:** 6–8 tuần  
-> **Status:** Design Complete → Ready for Implementation
+> **Status:** Phase 4 complete, LM Studio adapter added → E2E testing next
 
 ---
 
@@ -340,7 +340,7 @@ Cần verify:
 | Async embedding | Worker xử lý offline |
 | Checksum integrity | SHA256 verify data |
 | Reasoning logs | Track toàn bộ suy luận |
-| OpenAI integration | Embedding + LLM |
+| OpenAI / LM Studio integration | Embedding + LLM (dual provider) |
 
 ### 3.2. V1 KHÔNG Làm
 
@@ -352,7 +352,7 @@ Cần verify:
 | TEMPORAL_COMPARE mode | Sub-mode của REFLECT | V2 |
 | Auto mode classifier | Phức tạp, user chọn thủ công trước | V2 |
 | Streaming response | Complexiy thêm | V2 |
-| Local LLM (LM Studio) | V1 dùng OpenAI trước | V2 |
+| Local LLM (LM Studio) | ✅ Implemented in v0.2.0 | Done |
 | Multi-tenant | Thiết kế cho 1 user | Không cần |
 | Kubernetes | 1 server đủ | Không cần |
 | Microservice | Monolith tốt hơn ở scale này | Không cần |
@@ -412,8 +412,12 @@ python -m workers.run_embedding
 # Database
 DATABASE_URL=postgresql+asyncpg://ai_user:ai_password@localhost:5432/ai_person
 
-# OpenAI
+# OpenAI (chỉ cần nếu LLM_PROVIDER=openai)
 OPENAI_API_KEY=sk-your-key-here
+
+# Provider: "openai" hoặc "lmstudio"
+LLM_PROVIDER=lmstudio
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
 
 # Embedding
 EMBEDDING_MODEL=text-embedding-3-small
@@ -425,6 +429,7 @@ LLM_MODEL=gpt-4.1-mini
 # App
 MAX_CONTEXT_TOKENS=3000
 LOG_LEVEL=INFO
+DEBUG=false
 ```
 
 ---
@@ -528,8 +533,8 @@ chore: setup alembic migrations
 | Feature | Ưu Tiên | Mô Tả |
 |---|---|---|
 | File upload (PDF, image) | P1 | Chunking + parsing pipeline |
-| Local embedding model | P1 | bge-small / e5-small |
-| Local LLM (LM Studio) | P1 | Không phụ thuộc OpenAI |
+| Local embedding model | P1 | bge-small / e5-small (replace OpenAI embedding) |
+| ~~Local LLM (LM Studio)~~ | ~~P1~~ | ✅ **Done in v0.2.0** |
 | ANALYZE mode | P2 | Technical review mode |
 | TEMPORAL_COMPARE mode | P2 | So sánh evolution theo thời gian |
 | Auto mode classifier | P2 | Tự đoán mode từ câu hỏi |

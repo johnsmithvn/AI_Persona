@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     debug: bool = False
 
+    # ─── Provider ─────────────────────────────────────────────────────────────
+    llm_provider: str = "openai"  # "openai" or "lmstudio"
+    lmstudio_base_url: str = "http://localhost:1234/v1"
+
     # ─── Worker ───────────────────────────────────────────────────────────────
     embedding_worker_interval_seconds: int = 5
     embedding_worker_batch_size: int = 10

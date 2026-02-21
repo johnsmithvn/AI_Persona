@@ -41,6 +41,21 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.2.0] — 2026-02-21
+
+### Added
+- `app/llm/lmstudio_adapter.py` — LM Studio LLM adapter (OpenAI-compatible, `base_url` override)
+- `app/llm/lmstudio_embedding_adapter.py` — LM Studio embedding adapter
+- `LLM_PROVIDER` env var — switch between `"openai"` and `"lmstudio"` (default: `"openai"`)
+- `LMSTUDIO_BASE_URL` env var — LM Studio server URL (default: `http://localhost:1234/v1`)
+
+### Changed
+- `app/deps.py` — factory pattern selects adapter based on `LLM_PROVIDER` setting (lazy imports)
+- `app/config.py` — added `llm_provider` and `lmstudio_base_url` settings
+- `.env` / `.env.example` — added provider configuration section
+
+---
+
 ## [0.1.3] — 2026-02-21
 
 ### Fixed
@@ -118,7 +133,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
-[Unreleased]: https://github.com/username/ai-person/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/username/ai-person/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/username/ai-person/compare/v0.1.3...v0.2.0
 [0.1.3]: https://github.com/username/ai-person/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/username/ai-person/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/username/ai-person/compare/v0.1.0...v0.1.1

@@ -1,8 +1,8 @@
 # TODO — AI Person (Bộ Não Thứ 2)
 
-> **Version:** v0.1.3
+> **Version:** v0.2.0
 > **Last Updated:** 2026-02-21
-> **Status:** Audit gaps fixed → manual end-to-end test next
+> **Status:** LM Studio adapter added → restart uvicorn + test E2E
 
 ---
 
@@ -75,7 +75,7 @@
 
 ## 🔵 P2 — Backlog / V2
 
-- [ ] **`local_adapter.py`** — LM Studio / Ollama local model adapter (V2)
+- [x] **`local_adapter.py`** — LM Studio local model adapter (via OpenAI-compatible API)
 - [ ] **Summary persistence** — LLM-generated summary với user approval flow (V2)
   - `is_summary=true`, `metadata.parent_id`, `metadata.generated_by="system"`
   - Mặc định excluded khỏi retrieval
@@ -114,3 +114,4 @@
 - [x] **Fix #6: metadata_filter** — JSONB `@>` containment implemented in `retrieval/search.py`
 - [x] **Fix #7: content_type validator** — `field_validator` added to `schemas/search.py`
 - [x] **Fix #8: Personality mode_hints** — `personalities/default.yaml` updated with 5-mode focus + style hints
+- [x] **LM Studio Adapter** — `lmstudio_adapter.py` + `lmstudio_embedding_adapter.py`, provider switch via `LLM_PROVIDER` env var
