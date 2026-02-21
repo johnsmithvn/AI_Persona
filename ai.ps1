@@ -5,11 +5,12 @@ $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 switch ($Command) {
     "start" {
         Write-Host ""
-        Write-Host "  AI Person v0.3.0 — Starting..." -ForegroundColor Cyan
-        $apiArgs = "/k cd /d `"$ProjectRoot`" & call venv\Scripts\activate & uvicorn app.main:app --reload --port 8000"
+        Write-Host "  AI Person v0.3.0 - Starting..." -ForegroundColor Cyan
+        # Using single quotes for outer string to avoid PowerShell & parsing issues
+        $apiArgs = "/k cd /d ""$ProjectRoot"" & call venv\Scripts\activate & uvicorn app.main:app --reload --port 8000"
         Start-Process cmd -ArgumentList $apiArgs
         Start-Sleep -Seconds 2
-        $workerArgs = "/k cd /d `"$ProjectRoot`" & call venv\Scripts\activate & python -m workers.run_embedding"
+        $workerArgs = "/k cd /d ""$ProjectRoot"" & call venv\Scripts\activate & python -m workers.run_embedding"
         Start-Process cmd -ArgumentList $workerArgs
         Write-Host "  [OK] API:    http://localhost:8000" -ForegroundColor Green
         Write-Host "  [OK] Docs:   http://localhost:8000/docs" -ForegroundColor Green
