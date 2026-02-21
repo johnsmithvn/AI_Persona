@@ -84,3 +84,4 @@
 - [x] **Worker concurrency** — `SELECT FOR UPDATE SKIP LOCKED` in `get_pending_jobs()`
 - [x] **CHANGELOG.md** — created, v0.1.0 + v0.1.1 documented
 - [x] **TODO.md** — this file
+- [x] **API_DOCS.md** — full API reference (5 endpoints, schemas, modes, error codes, cURL examples)

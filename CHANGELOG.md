@@ -9,6 +9,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+- `docs/API_DOCS.md` — comprehensive API documentation (5 endpoints, schemas, error codes, cURL examples)
+
 ---
 
 ## [0.1.2] — 2026-02-20
