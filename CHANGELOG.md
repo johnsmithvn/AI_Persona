@@ -41,6 +41,20 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.1.3] — 2026-02-21
+
+### Fixed
+- `metadata_filter` — previously accepted by API but silently ignored in SQL; now implemented as JSONB `@>` containment in `retrieval/search.py`
+- `content_type` validation missing in `schemas/search.py` — added `field_validator` with 10 allowed content types (mirrors `schemas/query.py`)
+
+### Added
+- `personalities/default.yaml` — `mode_hints` section with per-mode `focus` + `style` for all 5 modes (RECALL/SYNTHESIZE/REFLECT/CHALLENGE/EXPAND)
+
+### Changed
+- `TODO.md` — marked 8 stale P1 sub-items as completed, bumped version to v0.1.3
+
+---
+
 ## [0.1.2] — 2026-02-20
 
 ### Fixed
@@ -104,6 +118,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
-[Unreleased]: https://github.com/username/ai-person/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/username/ai-person/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/username/ai-person/compare/v0.1.2...v0.1.3
+[0.1.2]: https://github.com/username/ai-person/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/username/ai-person/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/username/ai-person/releases/tag/v0.1.0

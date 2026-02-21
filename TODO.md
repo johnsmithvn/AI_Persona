@@ -1,8 +1,8 @@
 # TODO — AI Person (Bộ Não Thứ 2)
 
-> **Version:** v0.1.2
+> **Version:** v0.1.3
 > **Last Updated:** 2026-02-21
-> **Status:** Code refactored to 5-mode → docs synced → manual end-to-end test next
+> **Status:** Audit gaps fixed → manual end-to-end test next
 
 ---
 
@@ -48,21 +48,21 @@
 ## 🟡 P1 — Nên làm sớm
 
 - [x] **5-Mode code migration** (completed)
-  - [ ] 🔴 Update `_EXTERNAL_KNOWLEDGE_ALLOWED_MODES` → `{"EXPAND"}` in `reasoning/service.py`
-  - [ ] 🔴 Remove `MIN_CONTEXT_TOKENS` + token-threshold logic in `reasoning/service.py`
-  - [ ] 🔴 Replace token-threshold conditional with `if mode == "EXPAND"` in `reasoning/service.py`
-  - [ ] Add SYNTHESIZE + EXPAND weights to `_MODE_WEIGHTS` in `retrieval/ranking.py`
-  - [ ] Update `personalities/default.yaml` with SYNTHESIZE + EXPAND prompts
-  - [ ] Implement `metadata_filter` → SQL JSONB containment (`@>`) in `retrieval/search.py`
-  - [ ] Add `content_type` enum validation to `schemas/search.py`
-  - [ ] Add `INVALID_MODE` error to `exceptions/handlers.py`
+  - [x] 🔴 Update `_EXTERNAL_KNOWLEDGE_ALLOWED_MODES` → `{"EXPAND"}` in `reasoning/service.py`
+  - [x] 🔴 Remove `MIN_CONTEXT_TOKENS` + token-threshold logic in `reasoning/service.py`
+  - [x] 🔴 Replace token-threshold conditional with `if mode == "EXPAND"` in `reasoning/service.py`
+  - [x] Add SYNTHESIZE + EXPAND weights to `_MODE_WEIGHTS` in `retrieval/ranking.py`
+  - [x] Update `personalities/default.yaml` with SYNTHESIZE + EXPAND prompts
+  - [x] Implement `metadata_filter` → SQL JSONB containment (`@>`) in `retrieval/search.py`
+  - [x] Add `content_type` enum validation to `schemas/search.py`
+  - [x] Add `INVALID_MODE` error to `exceptions/handlers.py`
 - [ ] **Phase 0: Behavior Freeze**
   - [ ] Chốt system prompt final trong `personalities/default.yaml`
   - [ ] Test 30 lượt chat tay, verify AI giữ đúng nhân cách
   - [ ] Verify mode RECALL / REFLECT / CHALLENGE hoạt động đúng
   - [ ] Document kết quả vào `docs/BEHAVIOR_FREEZE.md`
 - [ ] **Verify epistemic boundary thực tế:**
-  - [ ] REFLECT với 0 memory → `external_knowledge_used=true`
+  - [ ] REFLECT với 0 memory → trả "không có memory liên quan", external_knowledge_used=false 
   - [ ] REFLECT với nhiều memory dài (>800 tokens) → `external_knowledge_used=false`
 - [ ] **Cập nhật GitHub repo URLs trong `CHANGELOG.md`** (khi có remote)
 - [ ] **Cập nhật Project Context** trong `PROMPT.md` skill:
@@ -111,3 +111,6 @@
   - `IMPLEMENTATION_PLAN.md`: Phase 4 checklist + test scenarios
   - Retired: ANALYZE, TEMPORAL_COMPARE → merged into SYNTHESIZE, REFLECT
   - Retired: token-threshold (800) → mode-based (EXPAND = external ON)
+- [x] **Fix #6: metadata_filter** — JSONB `@>` containment implemented in `retrieval/search.py`
+- [x] **Fix #7: content_type validator** — `field_validator` added to `schemas/search.py`
+- [x] **Fix #8: Personality mode_hints** — `personalities/default.yaml` updated with 5-mode focus + style hints

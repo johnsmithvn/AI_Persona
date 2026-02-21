@@ -11,6 +11,7 @@ NEVER calls LLM. NEVER reasons. Only finds.
 Must filter by embedding_model to prevent cross-model embedding comparison.
 """
 
+import json
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -69,6 +70,7 @@ class RetrievalService:
               AND (:end_date IS NULL OR created_at <= :end_date)
               AND (embedding <=> CAST(:embedding AS vector)) < :threshold
               AND (:include_summaries = true OR is_summary = false)
+              AND (:metadata_filter IS NULL OR metadata @> CAST(:metadata_filter AS jsonb))
             ORDER BY embedding <=> CAST(:embedding AS vector)
             LIMIT 500
         )
@@ -110,6 +112,7 @@ class RetrievalService:
                     "end_date": filters.end_date,
                     "threshold": filters.threshold,
                     "include_summaries": filters.include_summaries,
+                    "metadata_filter": json.dumps(filters.metadata_filter) if filters.metadata_filter else None,
                 },
             )
             rows = result.fetchall()
