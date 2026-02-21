@@ -216,7 +216,7 @@ Cần verify:
 |---|---|---|---|
 | 4.1 | Query schemas | `schemas/query.py` | P0 |
 | 4.2 | Personality YAML | `personalities/default.yaml` | P0 |
-| 4.3 | Mode Controller | `reasoning/mode_controller.py` — 3 modes | P0 |
+| 4.3 | Mode Controller | `reasoning/mode_controller.py` — 5 modes | P0 |
 | 4.4 | Prompt Builder | `reasoning/prompt_builder.py` — 4 phần | P0 |
 | 4.5 | LLM Adapter (OpenAI) | `llm/adapter.py`, `llm/openai_adapter.py` | P0 |
 | 4.6 | Reasoning Service | `reasoning/service.py` — orchestrator | P0 |
@@ -224,6 +224,7 @@ Cần verify:
 | 4.8 | Query API endpoint | `api/query.py` — POST /query | P0 |
 | 4.9 | Policy guard cho mỗi mode | Ràng buộc hành vi LLM | P1 |
 | 4.10 | Test 30 lượt chat thực tế | Verify chất lượng reasoning | P0 |
+| 4.11 | Source Decision Layer | Epistemic boundary: `mode == EXPAND` → external ON, others → OFF | P0 |
 
 #### Checklist
 
@@ -232,8 +233,10 @@ Cần verify:
 [x] QueryResponse schema (response, memory_used, token_usage, external_knowledge_used)
 [x] default.yaml personality file
 [x] ModeController.get_instruction('RECALL')
+[ ] ModeController.get_instruction('SYNTHESIZE')  ← NEW
 [x] ModeController.get_instruction('REFLECT')
 [x] ModeController.get_instruction('CHALLENGE')
+[ ] ModeController.get_instruction('EXPAND')  ← NEW
 [x] ModeController.get_policy() cho mỗi mode
 [x] PromptBuilder.build() — 4 phần không trộn
 [x] LLMAdapter abstract class
@@ -243,10 +246,13 @@ Cần verify:
 [x] Flow: query → retrieval → mode → prompt → LLM → response
 [x] Memory_used trả về đúng list memory_ids
 [x] reasoning_logs insert đúng
+[ ] Source Decision Layer: EXPAND → external ON, others → OFF  ← code update needed
 [ ] POST /api/v1/query hoạt động  ← pending end-to-end test
 [ ] RECALL mode: trả nguyên văn, không suy diễn  ← pending
-[ ] REFLECT mode: tổng hợp nhiều memory, cite source  ← pending
+[ ] SYNTHESIZE mode: tổng hợp nhiều memory, structured  ← pending (NEW)
+[ ] REFLECT mode: phân tích evolution, cite source  ← pending
 [ ] CHALLENGE mode: chỉ ra mâu thuẫn, logic yếu  ← pending
+[ ] EXPAND mode: memory + external kết hợp  ← pending (NEW)
 [ ] Test 30 lượt chat: verify chất lượng  ← Phase 0 (Behavior Freeze)
 [ ] Test: hệ thống nói "không biết" khi không có memory  ← pending
 ```
@@ -257,13 +263,19 @@ Cần verify:
 1. RECALL: "Tao từng viết gì về LoRA?"
    → Expect: trả nguyên văn memory liên quan
 
-2. REFLECT: "Tư duy của tao về AI thay đổi thế nào?"
-   → Expect: tổng hợp nhiều memory, nhận diện pattern
+2. SYNTHESIZE: "Tổng hợp những gì tao biết về fine-tuning"
+   → Expect: gom nhiều memory → structured summary
 
-3. CHALLENGE: "Hướng thiết kế này có ổn không?"
+3. REFLECT: "Tư duy của tao về AI thay đổi thế nào?"
+   → Expect: nhận diện pattern, timeline, evolution
+
+4. CHALLENGE: "Hướng thiết kế này có ổn không?"
    → Expect: chỉ ra mâu thuẫn với memory cũ
 
-4. No memory: "Tao nghĩ gì về blockchain?"
+5. EXPAND: "So sánh LoRA với QLoRA theo kiến thức mới nhất"
+   → Expect: memory + external knowledge, flag external_knowledge_used=true
+
+6. No memory: "Tao nghĩ gì về blockchain?"
    → Expect: "Không có memory liên quan"
 ```
 
@@ -322,7 +334,7 @@ Cần verify:
 | Time filter | Query theo khoảng thời gian |
 | Content type filter | Query theo loại nội dung |
 | Metadata filter | Query theo JSONB metadata |
-| 3 modes | RECALL, REFLECT, CHALLENGE |
+| 5 modes | RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND |
 | Ranking formula | Semantic + recency + importance |
 | Token budget | Giới hạn context gửi LLM |
 | Async embedding | Worker xử lý offline |

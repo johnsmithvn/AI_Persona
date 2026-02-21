@@ -14,7 +14,7 @@
 | `GET` | `/api/v1/memory/{id}` | Lấy memory theo ID |
 | `PATCH` | `/api/v1/memory/{id}/archive` | Archive / soft-delete |
 | `POST` | `/api/v1/search` | Semantic search |
-| `POST` | `/api/v1/query` | Reasoning (RECALL / REFLECT / CHALLENGE) |
+| `POST` | `/api/v1/query` | Reasoning (5-Mode) |
 | `GET` | `/health` | Health check |
 
 ---
@@ -128,10 +128,7 @@ Selective forgetting: soft-archive memory. **`raw_text` không bao giờ bị x�
 
 ### 2.1 POST `/api/v1/search` — Semantic Search
 
-Tìm kiếm memory bằng ngôn ngữ tự nhiên. Kết quả được xếp hạng theo:
-- **Semantic similarity** (60%)
-- **Recency decay** (15%)
-- **Importance score** (25%)
+Tìm kiếm memory bằng ngôn ngữ tự nhiên. Kết quả được xếp hạng theo ranking formula (mode-aware weights — xem DATA_DESIGN 7.2.1).
 
 **Request Body:**
 
@@ -151,12 +148,12 @@ Tìm kiếm memory bằng ngôn ngữ tự nhiên. Kết quả được xếp h�
 | Field | Type | Required | Default | Ghi Chú |
 |---|---|---|---|---|
 | `query` | `string` | ✅ | — | Natural language search |
-| `content_type` | `string` | ❌ | `null` | Filter theo loại |
+| `content_type` | `string` | ❌ | `null` | Filter theo loại. ⚠️ **Validation Gap:** Không validate enum |
 | `start_date` | `datetime` | ❌ | `null` | ISO 8601 |
 | `end_date` | `datetime` | ❌ | `null` | ISO 8601 |
 | `limit` | `int` | ❌ | `20` | Range: `1` – `100` |
 | `threshold` | `float` | ❌ | `0.7` | Cosine distance threshold (thấp = giống hơn) |
-| `metadata_filter` | `object` | ❌ | `null` | JSONB containment filter |
+| `metadata_filter` | `object` | ❌ | `null` | JSONB filter. ⚠️ **NOT_IMPLEMENTED in V1 SQL** — accepted but ignored |
 | `include_summaries` | `bool` | ❌ | `false` | Include `is_summary=true` records (V1: luôn `false`) |
 
 **Response (200 OK):**
@@ -210,7 +207,7 @@ Full reasoning pipeline:
 | Field | Type | Required | Default | Ghi Chú |
 |---|---|---|---|---|
 | `query` | `string` | ✅ | — | Question hoặc prompt |
-| `mode` | `string` | ❌ | `"RECALL"` | Enum: `RECALL`, `REFLECT`, `CHALLENGE` |
+| `mode` | `string` | ❌ | `"RECALL"` | Enum: `RECALL`, `SYNTHESIZE`, `REFLECT`, `CHALLENGE`, `EXPAND` |
 | `content_type` | `string` | ❌ | `null` | Restrict retrieval to type |
 | `threshold` | `float` | ❌ | `0.7` | Cosine distance threshold |
 
@@ -219,10 +216,12 @@ Full reasoning pipeline:
 | Mode | Hành Vi | External Knowledge |
 |---|---|---|
 | `RECALL` | Trả nguyên văn memory liên quan. Không suy diễn, không thêm bớt | ❌ NEVER |
-| `REFLECT` | Tổng hợp nhiều memory, nhận diện pattern, cite source. Cho phép suy luận | ✅ Khi context < 800 tokens |
+| `SYNTHESIZE` | Tổng hợp nhiều memory thành structured summary | ❌ NEVER |
+| `REFLECT` | Phân tích evolution tư duy, nhận diện pattern thay đổi | ❌ NEVER |
 | `CHALLENGE` | Chỉ ra mâu thuẫn giữa các memory, logic yếu, gaps | ❌ NEVER |
+| `EXPAND` | Mở rộng kiến thức, memory + external kết hợp | ✅ ALWAYS |
 
-> **V1 Epistemic Rule:** External knowledge chỉ được dùng ở `REFLECT` mode, và **chỉ khi** tổng token context < `MIN_CONTEXT_TOKENS` (800). Xem [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) Section 2.4.
+> **V1.1 Epistemic Rule:** External knowledge chỉ được dùng ở `EXPAND` mode. Mode = permission. Xem [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) Section 5.
 
 **Response (200 OK):**
 
@@ -291,6 +290,7 @@ Tất cả errors đều trả về format chuẩn. **Không bao giờ leak stac
 | `LLM_ERROR` | `503` | LLM request thất bại |
 | `RETRIEVAL_ERROR` | `500` | Retrieval pipeline lỗi |
 | `TOKEN_BUDGET_EXCEEDED` | `422` | Token budget vượt ngưỡng |
+| `INVALID_MODE` | `422` | Mode không hợp lệ (phải là RECALL/SYNTHESIZE/REFLECT/CHALLENGE/EXPAND) |
 | `INTERNAL_ERROR` | `500` | Unhandled error (no detail) |
 
 ---
@@ -357,6 +357,28 @@ curl -X POST http://localhost:8000/api/v1/query \
   -d '{
     "query": "Tư duy của tao về AI thay đổi thế nào?",
     "mode": "REFLECT"
+  }'
+```
+
+### Query with SYNTHESIZE mode
+
+```bash
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Tổng hợp những gì tao biết về LoRA",
+    "mode": "SYNTHESIZE"
+  }'
+```
+
+### Query with EXPAND mode (external knowledge)
+
+```bash
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "So sánh LoRA với QLoRA theo kiến thức mới nhất",
+    "mode": "EXPAND"
   }'
 ```
 

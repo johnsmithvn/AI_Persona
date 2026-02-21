@@ -2,7 +2,7 @@
 
 > **Project:** AI Person — Personal Memory-First AI System  
 > **Version:** V1 (Pre-release)  
-> **Last Updated:** 2026-02-20  
+> **Last Updated:** 2026-02-21  
 > **Framework:** FastAPI + SQLAlchemy 2.0 (async)  
 > **Language:** Python 3.11+
 
@@ -374,12 +374,15 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 #### `app/retrieval/ranking.py`
 
 ```python
-#compute_final_score(similarity, created_at, importance, mode=None)
-
-#Trọng số có thể thay đổi theo mode:
-#- RECALL → recency_weight thấp hoặc 0
-#- REFLECT → giữ mặc định
-#- CHALLENGE → recency_weight thấp
+# compute_final_score(similarity, created_at, importance, mode=None)
+#
+# Trọng số thay đổi theo mode (5-mode system):
+# - RECALL     → semantic 0.70, recency 0.10, importance 0.20
+# - SYNTHESIZE → semantic 0.60, recency 0.05, importance 0.35  (giảm recency, tăng importance)
+# - REFLECT    → semantic 0.40, recency 0.30, importance 0.30  (tăng recency để thấy evolution)
+# - CHALLENGE  → semantic 0.50, recency 0.10, importance 0.40  (giảm recency, focus logic)
+# - EXPAND     → semantic 0.70, recency 0.05, importance 0.25  (semantic cao, recency thấp)
+#
 # - deduplicate_memories(memories, threshold=0.95) → list
 #     Loại bỏ memory quá giống nhau (diversity guard)
 #
@@ -393,6 +396,10 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 #     - Only use pre-computed summaries (is_summary = true)
 #     - TokenGuard only trims/drops
 ```
+
+> [!CAUTION]
+> **Code mismatch:** `_MODE_WEIGHTS` hiện chỉ có 3 modes (RECALL/REFLECT/CHALLENGE).
+> Docs define 5-mode weights. Cần thêm SYNTHESIZE + EXPAND vào `_MODE_WEIGHTS`.
 
 ---
 
@@ -409,18 +416,22 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 #     2. Gọi ModeController → lấy mode instruction + policy
 #     3. Gọi PromptBuilder → xây prompt (4 phần)
 #     4. Apply TokenGuard → kiểm soát context size
-# Determine if external knowledge is needed:
-# - If query requires comparison/expansion beyond memory scope
-# - Allow LLM to use external knowledge
-# - Must flag external_knowledge_used = True
-#
-# No hard token-based lock in V1
+#     5. Source Decision Layer:
+#        - if mode == "EXPAND": external_knowledge_used = True
+#        - else: external_knowledge_used = False
 #     6. Gọi LLMAdapter.generate() → lấy response
 #     7. Log → reasoning_logs
 #     8. Return QueryResponse (response + memory_used)
 #
 # Đây là ORCHESTRATOR. Không trực tiếp query DB.
 ```
+
+> [!CAUTION]
+> **Code mismatch — CRITICAL:**
+> - Code L37: `_EXTERNAL_KNOWLEDGE_ALLOWED_MODES = {"REFLECT"}` ← **phải đổi thành `{"EXPAND"}`**
+> - Code L40: `MIN_CONTEXT_TOKENS = 800` ← **phải xóa, thay bằng mode-based rule**
+> - Code L84-88: Token-threshold conditional ← **phải đổi thành `if mode == "EXPAND"`**
+> - Docs đã migrate sang EXPAND-only. Code chưa.
 
 #### `app/reasoning/mode_controller.py`
 
@@ -432,12 +443,21 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 #     Trả mode-specific instruction
 #
 # - get_policy(mode) → Policy
-#     RECALL → không suy diễn
-#     REFLECT → phải cite memory_id
-#     CHALLENGE → bắt buộc dựa trên memory
+#     RECALL     → không suy diễn, không external
+#     SYNTHESIZE → tổng hợp, cite memory_id, không external
+#     REFLECT    → phân tích evolution, cite memory_id, không external
+#     CHALLENGE  → phản biện, cite memory_id, không external
+#     EXPAND     → mở rộng, cite memory_id, external bật
 #
-# Modes: RECALL, REFLECT, CHALLENGE
+# Modes: RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
 ```
+
+> [!CAUTION]
+> **Code mismatch — 3-mode only:**
+> - Code: `VALID_MODES = {"RECALL", "REFLECT", "CHALLENGE"}` — thiếu SYNTHESIZE + EXPAND
+> - Code: `_validate()` fallback về RECALL khi mode không hợp lệ (silent fail, không raise)
+> - Docs: 5 modes (RECALL/SYNTHESIZE/REFLECT/CHALLENGE/EXPAND)
+> - **Fix:** Thêm SYNTHESIZE + EXPAND vào `VALID_MODES`, raise `InvalidModeError` thay vì silent fallback
 
 #### `app/reasoning/prompt_builder.py`
 
@@ -495,11 +515,25 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 
 #### `app/core/prompts.py`
 
+> [!CAUTION]
+> **Code mismatch — 3-mode only + epistemic conflict:**
+> - `MODE_INSTRUCTIONS`: chỉ có RECALL, REFLECT, CHALLENGE — thiếu SYNTHESIZE + EXPAND
+> - `MODE_POLICIES`: chỉ có 3 modes — thiếu SYNTHESIZE + EXPAND
+> - **CRITICAL:** `REFLECT.can_use_external_knowledge = True` ← **mâu thuẫn với docs (REFLECT = NEVER external)**
+> - **CRITICAL:** REFLECT instruction chứa "you may supplement with external knowledge" ← **phải xóa dòng này**
+> - Docs: chỉ EXPAND được dùng external. REFLECT phải là `can_use_external_knowledge = False`
+> - **Fix:** Thêm SYNTHESIZE + EXPAND entries, đổi REFLECT.can_use_external = False, xóa external mention trong REFLECT instruction
+
 ```python
 # Constants & Templates:
-# - SYSTEM_PROMPT_TEMPLATE
 # - MODE_INSTRUCTIONS: dict[mode → instruction_text]
-# - POLICY_RULES: dict[mode → list[constraints]]
+#     Current keys: RECALL, REFLECT, CHALLENGE
+#     Missing: SYNTHESIZE, EXPAND
+# - MODE_POLICIES: dict[mode → ModePolicy]
+#     ModePolicy(can_use_external_knowledge, must_cite_memory_id, can_speculate, description)
+#     Current keys: RECALL, REFLECT, CHALLENGE
+#     Missing: SYNTHESIZE, EXPAND
+#     ⚠️ REFLECT.can_use_external_knowledge = True ← PHẢI đổi thành False
 ```
 
 #### `app/core/token_guard.py`

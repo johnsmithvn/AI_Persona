@@ -49,6 +49,45 @@ Toàn bộ quyết định kỹ thuật phải tuân theo 9 nguyên tắc sau. N
 | 8 | Backup — không mất dữ liệu | Checksum, integrity verification, backup strategy |
 | 9 | Sống lâu dài (5–10 năm) | Không lock-in, không phụ thuộc 1 provider |
 
+### 2.1. Memory-First Intelligence Principle
+
+> Hệ thống này **không phải chatbot biết nhớ**.
+> Nó là **memory infrastructure có khả năng reasoning**.
+
+#### Intelligence Hierarchy (Thứ tự ưu tiên tuyệt đối)
+
+```
+1. MEMORY        — nguồn sự thật duy nhất (single source of truth)
+2. RETRIEVAL     — trái tim hệ thống (quyết định chất lượng output)
+3. REASONING     — suy luận DỰA TRÊN memory đã retrieve
+4. EXTERNAL      — chỉ được dùng khi mode = EXPAND
+```
+
+#### Default Behavior
+
+- **Mặc định:** memory-only. LLM không được tự ý dùng kiến thức ngoài
+- **External chỉ bật khi:** `mode == "EXPAND"` — mode duy nhất cho phép
+- **`external_knowledge_used` phải log** trong `reasoning_logs` — bắt buộc
+
+#### Mode = Permission System (5-Mode)
+
+| Mode | Mục Đích | Memory | External | Suy Diễn |
+|---|---|---|---|---|
+| RECALL | Trả nguyên văn | ✅ | ❌ | ❌ |
+| SYNTHESIZE | Tổng hợp kiến thức đã ghi | ✅ | ❌ | ✅ (tổng hợp) |
+| REFLECT | Phân tích evolution tư duy | ✅ | ❌ | ✅ (evolution) |
+| CHALLENGE | Phản biện dựa trên memory | ✅ | ❌ | ✅ (phản biện) |
+| EXPAND | Mở rộng kiến thức khi cần | ✅ | ✅ | ✅ (external) |
+
+Mode không tạo ra AI khác nhau. Mode là **cấu hình quyền hạn** cho cùng một LLM.
+
+#### Retrieval là Trái Tim
+
+- Retrieval quyết định **50%** chất lượng output
+- Ranking formula (semantic × recency × importance) là logic cốt lõi
+- Diversity guard ngăn top-K bị dominate bởi memory giống nhau
+- TokenGuard đảm bảo LLM không bị overwhelm
+
 ---
 
 ## 3. Kiến Trúc Tổng Thể
@@ -79,7 +118,7 @@ Toàn bộ quyết định kỹ thuật phải tuân theo 9 nguyên tắc sau. N
 │  • Insert DB          │    │               │                  │
 │                       │    │  ┌────────────▼───────────────┐  │
 │                       │    │  │  Mode Controller           │  │
-│                       │    │  │  (RECALL/REFLECT/CHALLENGE)│  │
+│                       │    │  │  (5-Mode Permission)       │  │
 │                       │    │  └────────────┬───────────────┘  │
 │                       │    │               │                  │
 │                       │    │  ┌────────────▼───────────────┐  │
@@ -236,36 +275,45 @@ Lý do chọn recall cao:
 
 ---
 
-## 5. Mode System
+## 5. Mode System (5-Mode)
 
 ### 5.1. Danh Sách Mode
 
 | Mode | Mục Đích | Hành Vi | V1 |
 |---|---|---|---|
 | **RECALL** | Truy xuất nguyên văn | Trả đúng memory liên quan, không suy diễn | ✅ |
-| **REFLECT** | Phân tích lịch sử tư duy | Tổng hợp nhiều memory, nhận diện pattern | ✅ |
+| **SYNTHESIZE** | Tổng hợp kiến thức | Gom nhiều memory → structured summary | ✅ |
+| **REFLECT** | Phân tích evolution tư duy | Nhận diện pattern thay đổi theo thời gian | ✅ |
 | **CHALLENGE** | Phản biện người dùng | Tìm mâu thuẫn, chỉ ra logic yếu | ✅ |
-| **ANALYZE** | Phân tích trung lập | Technical review, logic thuần | V2 |
-| **TEMPORAL_COMPARE** | So sánh theo thời gian | Nhóm memory theo mốc, chỉ ra evolution | V2 |
+| **EXPAND** | Mở rộng kiến thức | Memory + external knowledge kết hợp | ✅ |
+
+> ⚠️ Mode V2 cũ (ANALYZE, TEMPORAL_COMPARE) đã retired. Chức năng được merge vào SYNTHESIZE và REFLECT.
+
+#### SYNTHESIZE vs REFLECT
+
+| | SYNTHESIZE | REFLECT |
+|---|---|---|
+| Input | "Tổng hợp kiến thức về X" | "Tư duy của tao về X thay đổi thế nào?" |
+| Focus | **Nội dung** — gom knowledge | **Quá trình** — phát hiện evolution |
+| Output | Summary, structured knowledge | Timeline, pattern, contradiction |
 
 ## Epistemic Boundary Enforcement
 
 Reasoning layer phải phân biệt rõ: **memory-based reasoning** vs **external knowledge reasoning**.
 
-### Rule V1 (Locked — Single Source of Truth)
+### Rule V1.1 (5-Mode — Single Source of Truth)
 
-External knowledge chỉ được phép trong **REFLECT mode** khi **tổng token của memory context < MIN_CONTEXT_TOKENS (800)**:
+External knowledge chỉ được phép trong **EXPAND mode**:
 
 ```python
 # Pseudocode — đây là rule duy nhất. Không có rule nào khác.
-MIN_CONTEXT_TOKENS = 800  # configurable qua env var EPISTEMIC_MIN_CONTEXT_TOKENS
-
-if mode not in {"REFLECT"}:
-    external_knowledge_used = False  # RECALL và CHALLENGE LUÔN bị khóa
-else:  # REFLECT only
-    total_context_tokens = sum(count_tokens(m.raw_text) for m in budgeted_memories)
-    external_knowledge_used = total_context_tokens < MIN_CONTEXT_TOKENS
+if mode == "EXPAND":
+    external_knowledge_used = True
+else:
+    external_knowledge_used = False  # RECALL, SYNTHESIZE, REFLECT, CHALLENGE luôn bị khóa
 ```
+
+Clean. Không conditional. Mode = permission.
 
 ### Quy Tắc Bắt Buộc
 
@@ -273,16 +321,15 @@ Nếu `external_knowledge_used = True`, LLM PHẢI:
 - Ghi rõ `[External knowledge used]` trong response
 - `external_knowledge_used = true` được set trong response và reasoning_logs
 
-### Tại Sao Token-Threshold (Không Phải Count-Based)
+### Tại Sao Mode-Based (Không Phải Token-Threshold)
 
-- 3 memory dài có thể = 2,000 tokens → đủ context, không cần external knowledge
-- 10 memory một câu có thể = 150 tokens → không đủ context, REFLECT được phép dùng external
-- Token-threshold đo **chất lượng context thực tế**, không phải số lượng records
+- Token-threshold V1 gắn vào REFLECT → phức tạp, conditional
+- Mode-based: clean permission → EXPAND = external ON, others = OFF
+- User chủ động chọn khi nào muốn external knowledge, không phải hệ thống tự quyết
 
-> ⚠️ Rule "nếu ≥ 3 memory → không được dùng external knowledge" đã bị retire.
-> Token-threshold là chuẩn duy nhất.
+> ⚠️ Rule token-threshold (MIN_CONTEXT_TOKENS = 800) cho REFLECT đã retired.
+> Chuẩn duy nhất: **mode == EXPAND**.
 
-    
 ### 5.2. Triết Lý Mode
 
 > Mode **không phải** hệ thống khác nhau.  
@@ -304,10 +351,10 @@ response = llm_adapter.generate(prompt)
 | Mode | External Knowledge | Cite Memory | Speculate |
 |---|---|---|---|
 | RECALL | ❌ Không bao giờ | Không bắt buộc | ❌ Không |
-| REFLECT | ✅ Khi context < 800 tokens | ✅ Bắt buộc | ✅ Có thể |
+| SYNTHESIZE | ❌ Không bao giờ | ✅ Bắt buộc | ✅ Có thể (tổng hợp) |
+| REFLECT | ❌ Không bao giờ | ✅ Bắt buộc | ✅ Có thể (evolution) |
 | CHALLENGE | ❌ Không bao giờ | ✅ Bắt buộc | ❌ Không |
-
-> Không còn rule "≥ 3 memory". Chuẩn duy nhất: **token-threshold (xem Epistemic Boundary section)**.
+| EXPAND | ✅ Luôn bật | ✅ Bắt buộc | ✅ Có thể |
 
 Nếu không có policy guard → mode chỉ là prompt decoration.
 

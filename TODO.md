@@ -1,14 +1,25 @@
 # TODO — AI Person (Bộ Não Thứ 2)
 
 > **Version:** v0.1.2
-> **Last Updated:** 2026-02-20
-> **Status:** Migration done → API server running → manual end-to-end test next
+> **Last Updated:** 2026-02-21
+> **Status:** Files recreated (3-mode) → REFLECT epistemic conflict → 5-mode code migration next
 
 ---
 
 ## 🔥 P0 — Phải làm ngay (trước khi dùng thực tế)
 
 - [ ] **Setup `.env`** — copy `.env.example` → `.env`, điền `OPENAI_API_KEY`
+- [ ] **🔴 Fix REFLECT epistemic conflict (code mâu thuẫn docs):**
+  - [ ] `prompts.py`: đổi `REFLECT.can_use_external_knowledge = True` → `False`
+  - [ ] `prompts.py`: xóa dòng "you may supplement with external knowledge" trong REFLECT instruction
+  - [ ] `service.py`: đổi `_EXTERNAL_KNOWLEDGE_ALLOWED_MODES = {"REFLECT"}` → `{"EXPAND"}`
+  - [ ] `service.py`: xóa `MIN_CONTEXT_TOKENS = 800` + token-threshold conditional
+  - [ ] `service.py`: thay bằng `if mode == "EXPAND": external_knowledge_used = True`
+- [ ] **🔴 Upgrade 3 files to 5-mode:**
+  - [ ] `prompts.py`: thêm SYNTHESIZE + EXPAND vào `MODE_INSTRUCTIONS` + `MODE_POLICIES`
+  - [ ] `mode_controller.py`: thêm SYNTHESIZE + EXPAND vào `VALID_MODES`
+  - [ ] `mode_controller.py`: raise `InvalidModeError` thay vì silent fallback
+  - [ ] `schemas/query.py`: thêm SYNTHESIZE + EXPAND vào mode validation
 - [x] **Chạy Docker** — `docker compose up -d` ✅
 - [x] **Chạy migration** — `alembic upgrade head` ✅ — all 7 indexes created
   - `idx_memory_embedding` (HNSW)
@@ -25,17 +36,25 @@
   - [ ] Verify `memory_records.embedding != NULL`
   - [ ] Check `embedding_jobs` status = `completed`
   - [ ] `POST /api/v1/search` → trả kết quả đúng
-  - [ ] `POST /api/v1/query` với `mode=RECALL` → răn đúng
-  - [ ] `POST /api/v1/query` với `mode=REFLECT` → verify `external_knowledge_used` flag
-  - [ ] `POST /api/v1/query` với `mode=CHALLENGE` → verify `external_knowledge_used=false` luôn
+  - [ ] `POST /api/v1/query` với `mode=RECALL` → tra đúng
+  - [ ] `POST /api/v1/query` với `mode=SYNTHESIZE` → tổng hợp memory
+  - [ ] `POST /api/v1/query` với `mode=REFLECT` → nhận diện evolution
+  - [ ] `POST /api/v1/query` với `mode=CHALLENGE` → verify `external_knowledge_used=false`
+  - [ ] `POST /api/v1/query` với `mode=EXPAND` → verify `external_knowledge_used=true`
 
 ---
 
 ## 🟡 P1 — Nên làm sớm
 
-- [ ] **Wire `EPISTEMIC_MIN_CONTEXT_TOKENS` vào `config.py`**
-  - Hiện tại `MIN_CONTEXT_TOKENS = 800` đang hardcode trong `app/reasoning/service.py`
-  - Cần đưa vào `Settings` class trong `config.py` để config qua `.env`
+- [ ] **5-Mode code migration** (docs done, code pending)
+  - [ ] 🔴 Update `_EXTERNAL_KNOWLEDGE_ALLOWED_MODES` → `{"EXPAND"}` in `reasoning/service.py`
+  - [ ] 🔴 Remove `MIN_CONTEXT_TOKENS` + token-threshold logic in `reasoning/service.py`
+  - [ ] 🔴 Replace token-threshold conditional with `if mode == "EXPAND"` in `reasoning/service.py`
+  - [ ] Add SYNTHESIZE + EXPAND weights to `_MODE_WEIGHTS` in `retrieval/ranking.py`
+  - [ ] Update `personalities/default.yaml` with SYNTHESIZE + EXPAND prompts
+  - [ ] Implement `metadata_filter` → SQL JSONB containment (`@>`) in `retrieval/search.py`
+  - [ ] Add `content_type` enum validation to `schemas/search.py`
+  - [ ] Add `INVALID_MODE` error to `exceptions/handlers.py`
 - [ ] **Phase 0: Behavior Freeze**
   - [ ] Chốt system prompt final trong `personalities/default.yaml`
   - [ ] Test 30 lượt chat tay, verify AI giữ đúng nhân cách
@@ -59,8 +78,6 @@
 - [ ] **Summary persistence** — LLM-generated summary với user approval flow (V2)
   - `is_summary=true`, `metadata.parent_id`, `metadata.generated_by="system"`
   - Mặc định excluded khỏi retrieval
-- [ ] **TEMPORAL_COMPARE mode** — so sánh memory theo mốc thời gian (V2)
-- [ ] **ANALYZE mode** — technical review, logic phân tích trung lập (V2)
 - [ ] **Chunking tự động** — auto-chunk PDF / article dài trước khi insert (V2)
 - [ ] **Partition strategy** — khi > 1M records, partition `memory_records` theo tháng
 - [ ] **Re-embed pipeline** — khi đổi embedding model, re-embed toàn bộ records (V2)
@@ -85,3 +102,11 @@
 - [x] **CHANGELOG.md** — created, v0.1.0 + v0.1.1 documented
 - [x] **TODO.md** — this file
 - [x] **API_DOCS.md** — full API reference (5 endpoints, schemas, modes, error codes, cURL examples)
+- [x] **OpenClaw analysis** — applied doc recommendations (Memory-First Principle, engagement V2, etc.)
+- [x] **5-Mode Design** — docs migration: RECALL/SYNTHESIZE/REFLECT/CHALLENGE/EXPAND
+  - `idea.md`: full rewrite with 5-mode ideal + architecture flow
+  - `PROJECT_STRUCTURE.md`: sections 2.1, 5, Epistemic Boundary, Policy Guard
+  - `API_DOCS.md`: modes table, cURL examples
+  - `IMPLEMENTATION_PLAN.md`: Phase 4 checklist + test scenarios
+  - Retired: ANALYZE, TEMPORAL_COMPARE → merged into SYNTHESIZE, REFLECT
+  - Retired: token-threshold (800) → mode-based (EXPAND = external ON)

@@ -358,16 +358,34 @@ LIMIT 30;
 
 
 ```
-- $7 = include_summaries (BOOLEAN, default false). Khi REFLECT cần dùng summary: truyền $7 = true.
+- $7 = include_summaries (BOOLEAN, default false). Khi SYNTHESIZE/REFLECT cần dùng summary: truyền $7 = true.
 - Recency dùng exponential decay thay vì inverse linear decay.
 - Half-life mặc định = 30 ngày.
-- Mode-specific ranking có thể override decay rate.
-⚠ Bắt buộc filter theo embedding_model.
-Không được search cross-model embeddings.
-⚠️ Lưu ý:
-Công thức recency hiện tại ưu tiên mạnh memory mới.
-Nếu hệ thống cần so sánh evolution dài hạn (REFLECT),
-có thể cần giảm trọng số recency.
+
+### 7.2.1 Mode-Aware Ranking Weights (5-Mode)
+
+SQL chỉ tính `similarity` và `recency_decay`. Final composite score được tính ở **app layer** (`retrieval/ranking.py`) để support mode-aware weights:
+
+| Mode | Semantic | Recency | Importance | Lý Do |
+|---|---|---|---|---|
+| **RECALL** | 0.70 | 0.10 | 0.20 | Focus đúng memory, giảm recency bias |
+| **SYNTHESIZE** | 0.60 | 0.05 | 0.35 | Gom toàn bộ knowledge, importance cao |
+| **REFLECT** | 0.40 | 0.30 | 0.30 | Cần thấy evolution theo thời gian |
+| **CHALLENGE** | 0.50 | 0.10 | 0.40 | Focus logic/mâu thuẫn, không thiên recency |
+| **EXPAND** | 0.70 | 0.05 | 0.25 | Semantic cao vì cần tìm đúng memory để bổ sung external |
+
+> ⚠️ **Architecture note:** `final_score` KHÔNG hardcode trong SQL. SQL chỉ trả `similarity` + `recency_decay` raw. App layer tính composite theo mode.
+
+```python
+# App layer (retrieval/ranking.py)
+MODE_WEIGHTS = {
+    "RECALL":     {"semantic": 0.70, "recency": 0.10, "importance": 0.20},
+    "SYNTHESIZE": {"semantic": 0.60, "recency": 0.05, "importance": 0.35},
+    "REFLECT":    {"semantic": 0.40, "recency": 0.30, "importance": 0.30},
+    "CHALLENGE":  {"semantic": 0.50, "recency": 0.10, "importance": 0.40},
+    "EXPAND":     {"semantic": 0.70, "recency": 0.05, "importance": 0.25},
+}
+```
 ### 7.3. Giải Thích Các Phần Quan Trọng
 
 #### Early Candidate Limit (500)
@@ -618,6 +636,36 @@ Khi implement V2, summary được phép lưu **với điều kiện nghiêm ng�
 - Không được dùng trong RECALL và CHALLENGE
 - Mặc định bị loại khỏi retrieval trừ khi `include_summaries=true`
 - User phải approve trước khi persist (hoặc auto-expire)
+
+### 11.8 Engagement Tracking (V2 Planned)
+
+V2 sẽ thêm engagement fields vào `memory_records` để ranking formula thông minh hơn:
+
+```sql
+-- V2: Thêm 3 cột
+ALTER TABLE memory_records ADD COLUMN access_count INTEGER DEFAULT 0;
+ALTER TABLE memory_records ADD COLUMN last_accessed_at TIMESTAMPTZ;
+ALTER TABLE memory_records ADD COLUMN decay_score FLOAT DEFAULT 1.0;
+```
+
+| Field | Type | Mục Đích |
+|---|---|---|
+| `access_count` | `int` | Số lần memory được retrieve (popularity) |
+| `last_accessed_at` | `timestamptz` | Lần cuối memory xuất hiện trong context |
+| `decay_score` | `float` | Precomputed decay (cron update hàng ngày) |
+
+**V2 Ranking formula update:**
+
+```
+final_score =
+    0.50 * semantic_similarity
+  + 0.10 * recency_decay
+  + 0.20 * importance_score
+  + 0.10 * engagement_boost      ← NEW
+  + 0.10 * decay_score            ← NEW
+```
+
+> ⚠️ **V1:** Không implement. Dùng formula hiện tại (0.60/0.15/0.25).
 
 ## 12. Migration Strategy (Alembic)
 

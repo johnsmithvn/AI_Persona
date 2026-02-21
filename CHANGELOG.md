@@ -11,6 +11,25 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 - `docs/API_DOCS.md` — comprehensive API documentation (5 endpoints, schemas, error codes, cURL examples)
+- `PROJECT_STRUCTURE.md` section 2.1: Memory-First Intelligence Principle
+- `DATA_DESIGN.md` section 11.8: Engagement Tracking (V2 Planned)
+
+### Changed
+- **BREAKING (docs):** 5-Mode System replaces 3-Mode (RECALL/SYNTHESIZE/REFLECT/CHALLENGE/EXPAND)
+- `idea.md` — full rewrite with 5-mode ideal, architecture flow, retrieval intelligence
+- `PROJECT_STRUCTURE.md` — sections 2.1, 5, Epistemic Boundary updated to 5-mode
+- `API_DOCS.md` — modes table, cURL examples updated to 5-mode
+- `IMPLEMENTATION_PLAN.md` — Phase 4 checklist + test scenarios + deliverables updated to 5-mode
+- `CODEBASE_STRUCTURE.md` — ModeController (5-mode), ranking.py (mode-aware weights), service.py (Source Decision Layer)
+- `DATA_DESIGN.md` — section 7.2.1: Mode-Aware Ranking Weights table + app-layer architecture note
+- Epistemic boundary: token-threshold (800) retired → mode-based (EXPAND = external ON)
+- Retired modes: ANALYZE, TEMPORAL_COMPARE → merged into SYNTHESIZE, REFLECT
+
+### Documented (Code Gaps)
+- `CODEBASE_STRUCTURE.md` — CAUTION blocks: ranking.py (3-mode), service.py (REFLECT+threshold), mode_controller.py (3-mode), prompts.py (3-mode + REFLECT epistemic conflict)
+- `API_DOCS.md` — `metadata_filter` marked NOT_IMPLEMENTED, `content_type` search validation gap noted
+- `API_DOCS.md` — `INVALID_MODE` error code added (422)
+- `TODO.md` — P0: REFLECT epistemic conflict + 5-mode upgrade; P1: expanded migration checklist
 
 ---
 

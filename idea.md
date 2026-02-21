@@ -1,4 +1,4 @@
-# AI Core – Memory-First Personal Intelligence
+# AI Core — Memory-First Personal Intelligence
 
 ## 1. Why This Exists
 
@@ -21,40 +21,35 @@ Tôi cần một hệ thống có thể:
 - So sánh tôi của hôm nay với tôi của 3 tháng trước
 - Chỉ ra khi tôi tự mâu thuẫn
 
-Dự án này tồn tại để trở thành “bộ não thứ hai”.
+Dự án này tồn tại để trở thành "bộ não thứ hai".
 
 Không thay thế tôi.
 Mà giúp tôi nhìn thấy chính mình rõ hơn.
 
-Hệ thống này tấm gương có trí nhớ hoàn hảo.
-
-Mỗi memory được thêm vào không chỉ là dữ liệu,
-mà là một mảnh của thế giới quan đang được xây dựng.
-
-Theo thời gian, hệ thống sẽ phản hồi theo pattern
-được hình thành từ chính lịch sử tư duy của tôi.
-
-Nó không trưởng thành độc lập.
-Nó trưởng thành cùng tôi.
+---
 
 ## 2. Core Philosophy
 
-> Base model chỉ là cái não.  
+> Base model chỉ là cái não.
 > AI Core là cách cái não đó cư xử.
 
 Hệ thống này không phải là một chatbot.
-Nó là một lớp reasoning đặt trên một base model duy nhất.
+Nó là một Memory-First Personal Intelligence System.
 
-Triết lý trung tâm:
+### 2.1. Nguyên Tắc Lõi
 
-- Memory là nền tảng.
-- LLM không được sửa hoặc ghi trực tiếp vào memory.
-- Reasoning phải dựa trên memory trước khi dựa vào kiến thức ngoài.
-- Nếu không chắc → nói không chắc.
-- Không bịa kiến thức.
+1. **Memory là trung tâm.** Mọi câu trả lời mặc định phải dựa trên memory.
+2. **Mode kiểm soát hành vi.** Mode là permission system, không phải AI khác nhau.
+3. **External knowledge không tự động bật.** Chỉ bật khi mode cho phép (EXPAND only).
+4. **Hệ thống phải phân biệt nguồn thông tin.** Memory-based vs External-based phải rõ ràng.
+5. **Retrieval quyết định chất lượng nhiều hơn prompt.** 50% output quality nằm ở retrieval.
+6. **LLM không được sửa hoặc ghi trực tiếp vào memory.** Chỉ đọc.
+7. **Nếu không chắc → nói không chắc.** Không bịa kiến thức.
 
 Đây là Memory-First AI.
 Không phải Prompt-Engineered Chatbot.
+
+---
 
 ## 3. Memory Principles
 
@@ -71,8 +66,6 @@ Chỉ có thể thêm mới.
 - CHALLENGE có thể dựa trên dữ liệu gốc.
 - Không bóp méo quá khứ.
 
----
-
 ### 3.2 Context Decay (Sự phai mờ ký ức)
 
 Không phải mọi memory đều bình đẳng.
@@ -86,7 +79,7 @@ Hệ thống phải:
 Memory tồn tại.
 Nhưng không phải memory nào cũng được ưu tiên ngang nhau.
 
-### 3.4 Selective Forgetting
+### 3.3 Selective Forgetting
 
 Mặc dù raw text là bất biến,
 hệ thống phải có khả năng:
@@ -98,40 +91,72 @@ hệ thống phải có khả năng:
 Quên không phải là xóa khỏi tồn tại.
 Mà là loại khỏi lớp suy luận.
 
-## 4. Epistemic Boundary
+---
+
+## 4. Epistemic Boundary (Ranh Giới Nhận Thức)
 
 Hệ thống phải phân biệt rõ:
 
 1. Reasoning dựa trên memory cá nhân.
 2. Reasoning dựa trên kiến thức bên ngoài.
 
-Nếu sử dụng kiến thức ngoài memory,
-hệ thống phải thể hiện rõ điều đó.
-
 Không được giả vờ rằng mọi suy luận đều xuất phát từ memory.
-
 Minh bạch nguồn suy luận là bắt buộc.
-## 5. Behavior Modes
 
-Modes không phải là AI khác nhau.
-Chỉ là cấu hình hành vi khác nhau.
+### 4.1 External Knowledge Rules (V1.1 — 5-Mode)
 
-### RECALL
-- Trả nguyên văn memory.
-- Không suy diễn.
-- Không thêm kiến thức ngoài.
+| Rule | Chi Tiết |
+|---|---|
+| Default | **Memory-only.** LLM không tự ý dùng kiến thức ngoài |
+| RECALL | External: ❌ NEVER |
+| SYNTHESIZE | External: ❌ NEVER |
+| REFLECT | External: ❌ NEVER |
+| CHALLENGE | External: ❌ NEVER |
+| EXPAND | External: ✅ **ALLOWED** — mode duy nhất cho phép |
+| Logging | `external_knowledge_used` bắt buộc log trong `reasoning_logs` |
+| Minh bạch | LLM phải nói rõ khi dùng external |
 
-### REFLECT
-- Tổng hợp nhiều memory.
-- Nhận diện pattern và evolution.
-- Có thể chỉ ra mâu thuẫn theo thời gian.
+### 4.2 Source Decision Layer
 
-### CHALLENGE
-- Phản biện dựa trên memory.
-- Tìm inconsistency.
-- Không tâng bốc.
+```
+Pipeline step 4 (trong ReasoningService):
+
+if mode == "EXPAND":
+    external_knowledge_used = True
+else:
+    external_knowledge_used = False
+```
+
+Clean. Không có conditional threshold. Mode = permission.
 
 ---
+
+## 5. Behavior Modes (5-Mode System)
+
+Modes không phải là AI khác nhau.
+Chỉ là cấu hình quyền hạn khác nhau cho cùng một LLM.
+
+### Mode Permission Matrix
+
+| Mode | Mục Đích | Memory | External | Suy Diễn |
+|---|---|---|---|---|
+| **RECALL** | Trả nguyên văn memory | ✅ | ❌ | ❌ |
+| **SYNTHESIZE** | Tổng hợp kiến thức đã ghi | ✅ | ❌ | ✅ (tổng hợp) |
+| **REFLECT** | Phân tích evolution tư duy | ✅ | ❌ | ✅ (evolution) |
+| **CHALLENGE** | Phản biện dựa trên memory | ✅ | ❌ | ✅ (phản biện) |
+| **EXPAND** | Mở rộng kiến thức khi cần | ✅ | ✅ | ✅ (external) |
+
+Memory luôn ưu tiên.
+External chỉ bật khi mode = EXPAND.
+
+### Ranh giới SYNTHESIZE vs REFLECT
+
+| | SYNTHESIZE | REFLECT |
+|---|---|---|
+| Input | "Tổng hợp kiến thức về X" | "Tư duy của tao về X thay đổi thế nào?" |
+| Focus | **Nội dung** — gom knowledge | **Quá trình** — phát hiện evolution |
+| Output | Summary, structured knowledge | Timeline, pattern, contradiction |
+| Ví dụ | "Tao biết gì về LoRA?" | "Quan điểm của tao về AI thay đổi ra sao?" |
 
 ### Citation Requirement
 
@@ -143,14 +168,106 @@ hoặc
 - Mốc thời gian
 
 để người dùng có thể kiểm chứng.
-## 6. Scope – Version 1
+
+---
+
+## 6. Retrieval Intelligence
+
+Retrieval không phải helper — nó là **trái tim hệ thống**.
+
+50% chất lượng output phụ thuộc vào retrieval tìm đúng memory.
+
+### Retrieval cần có:
+
+1. **Semantic similarity** — cosine distance qua HNSW index (core)
+2. **Ranking formula** — composite scoring: semantic + recency + importance
+3. **Engagement boost** — memory được dùng nhiều nổi lên tự nhiên (V2: access_count)
+4. **Anti-repeat** — session penalty: memory vừa dùng bị hạ rank (V2)
+5. **Diversity guard** — cosine > 0.95 giữa 2 memory → giữ 1
+
+### V1 Ranking:
+```
+final_score = 0.60 * semantic + 0.15 * recency + 0.25 * importance
+```
+
+### V2 Ranking (Planned):
+```
+final_score = 0.50 * semantic + 0.10 * recency + 0.20 * importance
+             + 0.10 * engagement_boost + 0.10 * decay_score
+```
+
+Nếu retrieval tìm sai → reasoning sai.
+Không có retrieval tốt thì LLM giỏi mấy cũng vô nghĩa.
+
+---
+
+## 7. Audit & Transparency
+
+Mọi reasoning session phải để lại dấu vết:
+
+| Audit Field | Mục Đích |
+|---|---|
+| `reasoning_logs` | Log toàn bộ query → response |
+| `memory_used` | List UUID memory đã dùng |
+| `external_knowledge_used` | Flag: LLM có dùng external không |
+| `prompt_hash` | SHA256 hash prompt (detect drift) |
+| `token_usage` | Cost tracking cho OpenAI |
+| `latency_ms` | Performance monitoring |
+
+Minh bạch không phải feature.
+Nó là **yêu cầu kiến trúc**.
+
+---
+
+## 8. Architecture Flow
+
+```
+User Query
+    │
+    ▼
+┌─────────────────┐
+│  Retrieval       │ ← semantic search + ranking + diversity
+│  (Trái Tim)     │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Mode Controller │ ← RECALL / SYNTHESIZE / REFLECT / CHALLENGE / EXPAND
+│  (Permission)    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Source Decision  │ ← EXPAND → external ON, others → OFF
+│  Layer           │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Prompt Builder  │ ← system + mode_instruction + memory + query
+│  + LLM Adapter   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Reasoning Log   │ ← audit trail
+└─────────────────┘
+```
+
+Không có magic.
+Không có rối.
+Không có mode tự ý chọn memory.
+
+---
+
+## 9. Scope — Version 1
 
 V1 tập trung vào:
 
 - Single-user
 - Text-based memory
 - Semantic retrieval
-- 3 mode: RECALL, REFLECT, CHALLENGE
+- 5 modes: RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
 - Logging cơ bản
 
 Không làm:
@@ -159,15 +276,19 @@ Không làm:
 - Auth phức tạp
 - Mobile app
 - Auto mode classifier
-- Streaming phức tạp
+- Streaming
 - Microservices
 
 Giữ hệ thống nhỏ và sạch.
 
-## 7. Long-Term Direction (Not V1)
+---
+
+## 10. Long-Term Direction (Not V1)
 
 Có thể phát triển thêm:
 
+- Engagement tracking (access_count, like_count, decay_score)
+- Anti-repeat (session penalty cho retrieval)
 - Memory compression layer
 - Re-embedding toàn bộ DB
 - LoRA để khóa hành vi
@@ -177,7 +298,9 @@ Có thể phát triển thêm:
 Nhưng chỉ sau khi V1 ổn định
 và triết lý không bị phá vỡ.
 
-## 8. Final Statement
+---
+
+## 11. Final Statement
 
 Đây không phải sản phẩm AI đại trà.
 
