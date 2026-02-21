@@ -5,7 +5,7 @@ $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 switch ($Command) {
     "start" {
         Write-Host ""
-        Write-Host "  AI Person v0.2.0 — Starting..." -ForegroundColor Cyan
+        Write-Host "  AI Person v0.3.0 — Starting..." -ForegroundColor Cyan
         $apiArgs = "/k cd /d `"$ProjectRoot`" & call venv\Scripts\activate & uvicorn app.main:app --reload --port 8000"
         Start-Process cmd -ArgumentList $apiArgs
         Start-Sleep -Seconds 2
@@ -25,14 +25,18 @@ switch ($Command) {
     "migrate" {
         & "$ProjectRoot\venv\Scripts\python.exe" -m alembic upgrade head
     }
+    "add" {
+        & "$ProjectRoot\venv\Scripts\python.exe" -m cli.add_memory
+    }
     default {
         Write-Host ""
-        Write-Host "  AI Person CLI v0.2.0" -ForegroundColor Cyan
+        Write-Host "  AI Person CLI v0.3.0" -ForegroundColor Cyan
         Write-Host "  =============================" -ForegroundColor Gray
         Write-Host "  .\ai start    Start API + Worker" -ForegroundColor White
         Write-Host "  .\ai api      Start API only" -ForegroundColor White
         Write-Host "  .\ai worker   Start Worker only" -ForegroundColor White
         Write-Host "  .\ai migrate  Run migrations" -ForegroundColor White
+        Write-Host "  .\ai add      Add memory (interactive)" -ForegroundColor White
         Write-Host ""
     }
 }

@@ -11,6 +11,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 - `docs/MEMORY_CONTRACT.md` — full Memory Contract V1 spec (content_type registry, metadata schema, tag registry, golden rules, examples)
+- `cli/` package — interactive `ai add` command (content_type, tags, person_name flow, metadata.type)
+- `cli/registry.py` — content_type, tag, type menus (mirrors MEMORY_CONTRACT.md)
+- `cli/person_helpers.py` — person name normalization + suggestion
+- `MemoryRepository.get_distinct_person_names()` — JSONB query for CLI person flow
 - `validate_citations()` in `ReasoningService` — enforces `[Memory N]` citation format, detects fabricated references
 - `PolicyViolationError` exception for mode policy violations
 - `CITATION_FORMAT_RULE` shared constant across all mode instructions

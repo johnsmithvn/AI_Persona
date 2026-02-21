@@ -83,6 +83,28 @@ class MemoryRepository:
                 update(MemoryRecord).where(MemoryRecord.id == memory_id).values(**values)
             )
 
+    async def get_distinct_person_names(self) -> list[str]:
+        """
+        Return distinct person names from memory records that have the 'person' tag.
+        Used by CLI for person_name suggestion flow.
+        """
+        from sqlalchemy import text
+
+        result = await self._session.execute(
+            text(
+                """
+                SELECT DISTINCT metadata->'extra'->>'person_name' AS name
+                FROM memory_records
+                WHERE metadata->'tags' ? 'person'
+                    AND metadata->'extra' IS NOT NULL
+                    AND metadata->'extra'->>'person_name' IS NOT NULL
+                    AND metadata->'extra'->>'person_name' <> ''
+                ORDER BY name
+                """
+            )
+        )
+        return [row[0] for row in result.fetchall()]
+
     # ─── embedding_jobs ───────────────────────────────────────────────────
 
     async def create_embedding_job(self, memory_id: uuid.UUID) -> EmbeddingJob:

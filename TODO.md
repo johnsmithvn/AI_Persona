@@ -2,7 +2,7 @@
 
 > **Version:** v0.3.0
 > **Last Updated:** 2026-02-21
-> **Status:** Memory Contract V1 locked + Reasoning safety fixes applied → E2E test
+> **Status:** Memory Contract V1 + CLI V1 + Reasoning safety → E2E test
 
 ---
 
@@ -13,6 +13,12 @@
   - [x] Drop `source_type` column → `metadata.source` (migration 004)
   - [x] Create `docs/MEMORY_CONTRACT.md` — full spec with tag registry, examples
   - [x] Update all docs (DATA_DESIGN, API_DOCS, README, etc.)
+- [x] **CLI V1 — Interactive `ai add`:**
+  - [x] `cli/registry.py` — content_type, tag, type menus
+  - [x] `cli/add_memory.py` — 9-step interactive flow
+  - [x] `cli/person_helpers.py` — normalize + suggest
+  - [x] `MemoryRepository.get_distinct_person_names()`
+  - [x] `ai.ps1` — `.\ai add` command
 - [x] **Reasoning Layer Safety Fixes:**
   - [x] RECALL `must_cite_memory_id = True` (was False)
   - [x] `validate_citations()` in ReasoningService — enforces `[Memory N]` format

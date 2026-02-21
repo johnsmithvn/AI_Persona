@@ -153,6 +153,19 @@ EMBEDDING_DIMENSION=1536
 | `POST` | `/api/v1/query` | Reasoning query (5 modes) |
 | `GET` | `/health` | Health check |
 
+### CLI — Add Memory (Interactive)
+
+```powershell
+.\ai add
+```
+
+Interactive flow:
+1. Nhập nội dung (multiline, kết thúc bằng `::end`)
+2. Chọn `content_type` (6 loại)
+3. Flow người (person_name suggestion)
+4. Chọn tags (22 tags cố định)
+5. Xác nhận → lưu qua `MemoryService`
+
 ### Save Memory
 
 ```bash
@@ -221,12 +234,6 @@ AI_Person/
 │   ├── db/               # SQLAlchemy models + Alembic migrations
 │   ├── exceptions/       # Custom exception classes + handlers
 │   ├── llm/              # LLM + Embedding adapters (OpenAI + LM Studio)
-│   │   ├── adapter.py              # Abstract LLMAdapter
-│   │   ├── embedding_adapter.py    # Abstract EmbeddingAdapter
-│   │   ├── openai_adapter.py       # OpenAI LLM
-│   │   ├── openai_embedding_adapter.py  # OpenAI embedding
-│   │   ├── lmstudio_adapter.py     # LM Studio LLM (NEW)
-│   │   └── lmstudio_embedding_adapter.py  # LM Studio embedding (NEW)
 │   ├── logging/          # Structured JSON logger
 │   ├── memory/           # Save + checksum + embedding job creation
 │   ├── reasoning/        # Mode controller + prompt builder + orchestrator
@@ -235,6 +242,10 @@ AI_Person/
 │   ├── config.py         # Settings (all env vars)
 │   ├── deps.py           # DI factory (provider switching)
 │   └── main.py           # FastAPI app entry point
+├── cli/                  # Interactive CLI ingestion
+│   ├── add_memory.py     # `ai add` — main interactive flow
+│   ├── registry.py       # Content type, tag, type menus
+│   └── person_helpers.py # Person name suggest + normalize
 ├── workers/
 │   └── run_embedding.py  # Background embedding CLI
 ├── personalities/

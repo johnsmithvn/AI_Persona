@@ -81,6 +81,12 @@ ai-person/
 │       ├── __init__.py
 │       └── logger.py                 # Logger setup, correlation ID
 │
+├── cli/                              # Interactive CLI ingestion
+│   ├── __init__.py
+│   ├── add_memory.py                 # `ai add` — interactive memory creation
+│   ├── registry.py                   # Content type, tag, type menus
+│   └── person_helpers.py             # Person name normalize + suggest
+│
 ├── workers/                          # Background worker entrypoints
 │   ├── __init__.py
 │   └── run_embedding.py              # CLI entry: python -m workers.run_embedding
@@ -131,6 +137,7 @@ ai-person/
 | **LLM** | `app/llm/` | Gọi model, trả response | Biết gì về memory structure |
 | **Core** | `app/core/` | Personality, prompts, token budget | DB operations |
 | **DB** | `app/db/` | Session, ORM models, migrations | Business logic |
+| **CLI** | `cli/` | Interactive ingestion (reuses MemoryService) | Query DB trực tiếp, bypass schema |
 | **Workers** | `workers/` | Background job execution | HTTP handling |
 | **Exceptions** | `app/exceptions/` | Error classes, error handlers | Business logic |
 | **Logging** | `app/logging/` | Structured logging, correlation ID | Business logic |
