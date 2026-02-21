@@ -1,12 +1,26 @@
 # TODO — AI Person (Bộ Não Thứ 2)
 
-> **Version:** v0.2.0
+> **Version:** v0.3.0
 > **Last Updated:** 2026-02-21
-> **Status:** LM Studio adapter added → restart uvicorn + test E2E
+> **Status:** Memory Contract V1 locked + Reasoning safety fixes applied → E2E test
 
 ---
 
-## 🔥 P0 — Phải làm ngay (trước khi dùng thực tế)
+## 🔥 P0 — v0.3.0 Completed
+
+- [x] **Memory Contract V1:**
+  - [x] `content_type` → 6 fixed values (note, conversation, reflection, idea, article, log)
+  - [x] Drop `source_type` column → `metadata.source` (migration 004)
+  - [x] Create `docs/MEMORY_CONTRACT.md` — full spec with tag registry, examples
+  - [x] Update all docs (DATA_DESIGN, API_DOCS, README, etc.)
+- [x] **Reasoning Layer Safety Fixes:**
+  - [x] RECALL `must_cite_memory_id = True` (was False)
+  - [x] `validate_citations()` in ReasoningService — enforces `[Memory N]` format
+  - [x] EXPAND "No Override" guard — memory is source of truth
+  - [x] REFLECT "No Psychological Inference" guard
+  - [x] Citation format instruction in PromptBuilder
+  - [x] `PolicyViolationError` exception class
+- [x] **ENUM → VARCHAR migration** (003) — fixes asyncpg type mismatch
 
 - [ ] **Setup `.env`** — copy `.env.example` → `.env`, điền `OPENAI_API_KEY`
 - [x] **✅ Fix REFLECT epistemic conflict:**

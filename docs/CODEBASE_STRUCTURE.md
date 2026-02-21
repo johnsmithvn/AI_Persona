@@ -1,7 +1,7 @@
 # CODEBASE STRUCTURE — AI Person (Bộ Não Thứ 2)
 
 > **Project:** AI Person — Personal Memory-First AI System  
-> **Version:** V1 (v0.2.0)  
+> **Version:** V1 (v0.3.0)  
 > **Last Updated:** 2026-02-21  
 > **Framework:** FastAPI + SQLAlchemy 2.0 (async)  
 > **Language:** Python 3.11+

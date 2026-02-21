@@ -1,6 +1,6 @@
 # AI Person — Bộ Não Thứ 2
 
-> **Personal Memory-First AI System** — Version 0.2.0
+> **Personal Memory-First AI System** — Version 0.3.0
 
 A production-grade personal AI that stores your thinking history and reasons over it. Not a chatbot. Not a RAG demo. A long-term memory infrastructure designed to live alongside you for 5–10 years.
 
@@ -161,7 +161,11 @@ curl -X POST http://localhost:8000/api/v1/memory \
   -d '{
     "raw_text": "Hôm nay tôi nhận ra rằng momentum trong ML không chỉ là kỹ thuật mà là tư duy.",
     "content_type": "reflection",
-    "importance_score": 0.8
+    "importance_score": 0.8,
+    "metadata": {
+      "tags": ["ai", "deep"],
+      "source": "api"
+    }
   }'
 ```
 
@@ -259,6 +263,7 @@ main                    ← production-ready
 
 | Doc | Description |
 |---|---|
+| [MEMORY_CONTRACT.md](docs/MEMORY_CONTRACT.md) | **Memory Contract V1** — data schema, tag registry, examples |
 | [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) | Architecture philosophy + data flow |
 | [DATA_DESIGN.md](docs/DATA_DESIGN.md) | DB schema, indexes, retrieval SQL |
 | [CODEBASE_STRUCTURE.md](docs/CODEBASE_STRUCTURE.md) | File responsibilities |
@@ -269,4 +274,4 @@ main                    ← production-ready
 
 ## 📦 Version
 
-Current: **v0.2.0** — Full 5-mode system + LM Studio local model support
+Current: **v0.3.0** — Memory Contract V1 + Reasoning Layer safety fixes + LM Studio support

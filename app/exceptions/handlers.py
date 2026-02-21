@@ -99,6 +99,16 @@ class InvalidModeError(AppError):
         )
 
 
+class PolicyViolationError(AppError):
+    """Raised when LLM response violates mode policy (e.g. no citations when required)."""
+    def __init__(self, mode: str, violation: str) -> None:
+        super().__init__(
+            code="POLICY_VIOLATION",
+            message=f"[{mode}] Policy violation: {violation}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
 # ─── Response Builder ─────────────────────────────────────────────────────────
 
 def _error_response(

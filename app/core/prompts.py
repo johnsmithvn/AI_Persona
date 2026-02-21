@@ -25,6 +25,13 @@ class ModePolicy:
     description: str
 
 
+# ─── Citation Format (shared across instructions) ─────────────────────────────
+CITATION_FORMAT_RULE = (
+    "- When citing memory, use the format: [Memory N] where N is the memory index. "
+    "Do NOT invent or fabricate memory IDs.\n"
+)
+
+
 # ─── Mode Instructions ────────────────────────────────────────────────────────
 # These are injected verbatim into the prompt as part 2.
 
@@ -38,7 +45,8 @@ MODE_INSTRUCTIONS: dict[str, str] = {
         "- If the memory context does not contain relevant information, say: "
         "\"Không có memory liên quan đến câu hỏi này.\"\n"
         "- Quote or closely paraphrase the memory when possible.\n"
-        "- Cite the memory reference (date or position) when quoting.\n"
+        "- MUST cite the memory reference using [Memory N] for every point.\n"
+        + CITATION_FORMAT_RULE
     ),
     "SYNTHESIZE": (
         "MODE: SYNTHESIZE\n"
@@ -47,10 +55,11 @@ MODE_INSTRUCTIONS: dict[str, str] = {
         "Rules:\n"
         "- Combine information across multiple memories — do NOT just list them.\n"
         "- Create structured output: group by theme, timeline, or logical flow.\n"
-        "- MUST cite specific memory references (dates or memory IDs) for each point.\n"
+        "- MUST cite specific memory references using [Memory N] for each point.\n"
         "- Do NOT use external knowledge — only the provided memory context.\n"
         "- If memories are insufficient, state what is missing rather than guessing.\n"
         "- Do not fabricate memories.\n"
+        + CITATION_FORMAT_RULE
     ),
     "REFLECT": (
         "MODE: REFLECT\n"
@@ -58,10 +67,13 @@ MODE_INSTRUCTIONS: dict[str, str] = {
         "Rules:\n"
         "- Identify patterns, shifts, and evolution in thinking over time.\n"
         "- Compare earlier vs later memories to surface changes.\n"
-        "- MUST cite specific memory references (dates or memory IDs).\n"
+        "- MUST cite specific memory references using [Memory N].\n"
         "- Do NOT use external knowledge — only the provided memory context.\n"
         "- You may reason about what the pattern suggests, but flag any inference clearly.\n"
+        "- Do NOT make psychological diagnoses, personality assessments, or emotional judgments. "
+        "Stick to observable patterns in the data.\n"
         "- Do not fabricate memories.\n"
+        + CITATION_FORMAT_RULE
     ),
     "CHALLENGE": (
         "MODE: CHALLENGE\n"
@@ -72,19 +84,25 @@ MODE_INSTRUCTIONS: dict[str, str] = {
         "- Do NOT soften contradictions. Be direct.\n"
         "- Do NOT agree just to be polite.\n"
         "- If no contradictions are found, say so explicitly.\n"
-        "- Cite memory references for every challenge point.\n"
+        "- MUST cite memory references using [Memory N] for every challenge point.\n"
+        + CITATION_FORMAT_RULE
     ),
     "EXPAND": (
         "MODE: EXPAND\n"
         "Your task is to supplement the provided memory with external knowledge "
         "to give a broader, more complete perspective.\n"
         "Rules:\n"
-        "- Start with what the memory already contains — memory is primary.\n"
+        "- Start with what the memory already contains — memory is PRIMARY.\n"
         "- You ARE permitted to use external knowledge to complement and expand.\n"
+        "- External knowledge MUST NOT override or contradict memory without explicit justification. "
+        "Memory is the source of truth.\n"
         "- MUST explicitly mark any external knowledge with: [External knowledge used]\n"
-        "- MUST cite memory references for memory-based points.\n"
-        "- Clearly separate memory-based reasoning from external-based reasoning.\n"
+        "- MUST cite memory references using [Memory N] for memory-based points.\n"
+        "- Structure your response in two clear sections:\n"
+        "  1. **Từ Memory:** (what the memories say)\n"
+        "  2. **Bổ sung từ External:** (what external knowledge adds)\n"
         "- Do not fabricate memories.\n"
+        + CITATION_FORMAT_RULE
     ),
 }
 
@@ -93,7 +111,7 @@ MODE_INSTRUCTIONS: dict[str, str] = {
 MODE_POLICIES: dict[str, ModePolicy] = {
     "RECALL": ModePolicy(
         can_use_external_knowledge=False,
-        must_cite_memory_id=False,
+        must_cite_memory_id=True,  # P0 fix: RECALL must cite
         can_speculate=False,
         description="Strictly memory-bound retrieval. No external knowledge.",
     ),

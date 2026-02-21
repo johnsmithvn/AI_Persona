@@ -7,6 +7,29 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [v0.3.0] — 2026-02-21
+
+### Added
+- `docs/MEMORY_CONTRACT.md` — full Memory Contract V1 spec (content_type registry, metadata schema, tag registry, golden rules, examples)
+- `validate_citations()` in `ReasoningService` — enforces `[Memory N]` citation format, detects fabricated references
+- `PolicyViolationError` exception for mode policy violations
+- `CITATION_FORMAT_RULE` shared constant across all mode instructions
+- Migration `004_drop_source_type_column.py` — moves `source_type` to `metadata.source`
+
+### Changed
+- **BREAKING:** `source_type` top-level column removed → use `metadata.source` instead
+- **BREAKING:** `content_type` reduced from 10 → 6 values (`quote`, `repo`, `pdf`, `transcript` removed)
+- RECALL policy: `must_cite_memory_id` changed from `False` → `True`
+- REFLECT instruction: added "No Psychological Inference" guard
+- EXPAND instruction: added "No Override" guard + Memory/External section format
+- PromptBuilder: added citation format header in MEMORY CONTEXT section
+- All docs bumped to v0.3.0
+
+### Fixed
+- Migration `003_enum_to_varchar.py` — fixed CASCADE issue when dropping ENUM types
+
+---
+
 ## [Unreleased]
 
 ### Added

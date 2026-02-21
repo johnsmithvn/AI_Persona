@@ -4,7 +4,7 @@ PromptBuilder — assembles the 4-part prompt structure.
 4 Parts (DO NOT MIX):
   1. System Prompt    — personality (from YAML)
   2. Mode Instruction — RECALL / SYNTHESIZE / REFLECT / CHALLENGE / EXPAND behavior
-  3. Memory Context   — retrieved records
+  3. Memory Context   — retrieved records with [Memory N] labels for citation
   4. User Query       — the actual question
 
 Order matters. Separation matters. Mixing = mode drift.
@@ -19,6 +19,7 @@ from app.core.token_guard import BudgetedMemory
 class PromptBuilder:
     """Builds a structured prompt from its 4 distinct parts."""
 
+    # Memory template — index format matches citation pattern [Memory N]
     MEMORY_TEMPLATE = "[Memory {index}] [{date}] (type={content_type}, score={score:.2f})\n{text}"
 
     def build(
@@ -53,6 +54,10 @@ class PromptBuilder:
 
         if memories:
             parts.append("=== MEMORY CONTEXT ===")
+            parts.append(
+                f"You have {len(memories)} memories below. "
+                "Cite them as [Memory 1], [Memory 2], etc."
+            )
             for i, m in enumerate(memories, start=1):
                 date_str = m.created_at.strftime("%Y-%m-%d") if isinstance(m.created_at, datetime) else str(m.created_at)
                 parts.append(self.MEMORY_TEMPLATE.format(
@@ -75,6 +80,7 @@ class PromptBuilder:
                 "=== KNOWLEDGE NOTE ===",
                 "You are permitted to supplement with external knowledge for this query.",
                 "You MUST explicitly mark any external knowledge with: [External knowledge used]",
+                "External knowledge MUST NOT override memory without explicit justification.",
                 "",
             ])
 

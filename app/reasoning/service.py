@@ -8,14 +8,16 @@ Flow:
   4. Epistemic boundary decision (mode-based: EXPAND only)
   5. PromptBuilder → build 4-part prompt
   6. LLMAdapter.generate() → get response
-  7. Log to reasoning_logs
-  8. Return QueryResponse
+  7. Validate citations (P0 — enforce must_cite_memory_id)
+  8. Log to reasoning_logs
+  9. Return QueryResponse
 
 NEVER queries DB directly.
 NEVER knows about embedding details.
 """
 
 import hashlib
+import re
 import time
 import uuid
 from datetime import datetime, timezone
@@ -24,19 +26,24 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.personality import build_system_prompt, load_personality
+from app.core.prompts import ModePolicy
 from app.core.token_guard import TokenGuard
 from app.db.models import ReasoningLog
 from app.llm.adapter import LLMAdapter, LLMConfig
 from app.llm.embedding_adapter import EmbeddingAdapter
 from app.logging.logger import logger
+from app.exceptions.handlers import PolicyViolationError
 from app.reasoning.mode_controller import ModeController
 from app.reasoning.prompt_builder import PromptBuilder
 from app.retrieval.search import RetrievalService, SearchFilters
 from app.schemas.query import QueryRequest, QueryResponse
 
+# Regex to find [Memory N] citations in LLM response
+_CITATION_PATTERN = re.compile(r"\[Memory\s+(\d+)\]")
+
 
 class ReasoningService:
-    """Orchestrates retrieval → mode → prompt → LLM → log."""
+    """Orchestrates retrieval → mode → prompt → LLM → validate → log."""
 
     def __init__(
         self,
@@ -95,10 +102,18 @@ class ReasoningService:
             LLMConfig(temperature=0.3, max_tokens=1200),
         )
 
+        # 7. Validate citations — enforce must_cite_memory_id policy
+        self._validate_citations(
+            response_text=llm_response.content,
+            policy=policy,
+            mode=mode,
+            memory_count=len(budgeted),
+        )
+
         latency_ms = int((time.monotonic() - start_time) * 1000)
         memory_ids = [uuid.UUID(m.id) for m in budgeted]
 
-        # 7. Log to reasoning_logs
+        # 8. Log to reasoning_logs
         prompt_hash = hashlib.sha256(full_prompt.encode()).hexdigest()
         log = ReasoningLog(
             user_query=request.query,
@@ -142,3 +157,51 @@ class ReasoningService:
             external_knowledge_used=external_knowledge_used,
             latency_ms=latency_ms,
         )
+
+    # ─── Citation Validation ──────────────────────────────────────────────────
+
+    def _validate_citations(
+        self,
+        response_text: str,
+        policy: ModePolicy,
+        mode: str,
+        memory_count: int,
+    ) -> None:
+        """
+        Validate citations in LLM response against policy.
+
+        Checks:
+        1. If must_cite_memory_id=True and memories exist → response MUST contain [Memory N]
+        2. Any cited [Memory N] index must be within range [1, memory_count]
+        3. Out-of-range citations → warning log (fabricated reference)
+        """
+        cited_indices = set(int(m) for m in _CITATION_PATTERN.findall(response_text))
+
+        # Check 1: policy requires citations but LLM gave none
+        if policy.must_cite_memory_id and memory_count > 0 and not cited_indices:
+            logger.warning(
+                "citation_policy_violation",
+                extra={
+                    "mode": mode,
+                    "memory_count": memory_count,
+                    "violation": "must_cite_memory_id=True but no citations found",
+                },
+            )
+            raise PolicyViolationError(
+                mode=mode,
+                violation="Response must cite memory references but none were found.",
+            )
+
+        # Check 2: fabricated citations (index out of range)
+        valid_range = set(range(1, memory_count + 1))
+        fabricated = cited_indices - valid_range
+        if fabricated:
+            logger.warning(
+                "fabricated_citation_detected",
+                extra={
+                    "mode": mode,
+                    "fabricated_indices": sorted(fabricated),
+                    "valid_range": f"1-{memory_count}",
+                },
+            )
+            # Warning only — don't block response, but log for audit

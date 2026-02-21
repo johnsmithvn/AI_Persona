@@ -1,10 +1,10 @@
 # IMPLEMENTATION PLAN — AI Person (Bộ Não Thứ 2)
 
 > **Project:** AI Person — Personal Memory-First AI System  
-> **Version:** V1 (v0.2.0)  
+> **Version:** V1 (v0.3.0)  
 > **Last Updated:** 2026-02-21  
 > **Estimated Timeline:** 6–8 tuần  
-> **Status:** Phase 4 complete, LM Studio adapter added → E2E testing next
+> **Status:** Memory Contract V1 locked, Reasoning Layer safety fixes applied
 
 ---
 
