@@ -7,6 +7,7 @@ IMMUTABILITY CONTRACT:
 - Only embedding, embedding_model, importance_score, metadata, and flags may change.
 """
 
+import os
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -27,6 +28,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+# Read dimension from env directly to avoid circular import with config
+_EMBEDDING_DIMENSION = int(os.environ.get("EMBEDDING_DIMENSION", "768"))
 
 
 class Base(DeclarativeBase):
@@ -62,7 +66,7 @@ class MemoryRecord(Base):
     source_type: Mapped[str] = mapped_column(String(30), nullable=False, default="manual")
 
     # Embedding — may be NULL until worker processes the job
-    embedding: Mapped[Optional[list]] = mapped_column(Vector(1536), nullable=True)
+    embedding: Mapped[Optional[list]] = mapped_column(Vector(_EMBEDDING_DIMENSION), nullable=True)
     embedding_model: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
     # Integrity
