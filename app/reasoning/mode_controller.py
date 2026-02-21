@@ -1,12 +1,15 @@
 """
 ModeController — selects mode instruction and policy for a given mode string.
 Single-responsibility: knows about modes, nothing else.
+
+5-Mode System: RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
 """
 
 from app.core.prompts import MODE_INSTRUCTIONS, MODE_POLICIES, ModePolicy
+from app.exceptions.handlers import InvalidModeError
 from app.logging.logger import logger
 
-VALID_MODES = frozenset({"RECALL", "REFLECT", "CHALLENGE"})
+VALID_MODES = frozenset(MODE_INSTRUCTIONS.keys())
 
 
 class ModeController:
@@ -22,9 +25,10 @@ class ModeController:
         mode = self._validate(mode)
         return MODE_POLICIES[mode]
 
-    def _validate(self, mode: str) -> str:
+    @staticmethod
+    def _validate(mode: str) -> str:
+        """Validate and normalize mode string. Raises InvalidModeError on bad input."""
         mode = mode.upper().strip()
         if mode not in VALID_MODES:
-            logger.warning("invalid_mode_fallback", extra={"requested": mode})
-            return "RECALL"  # Safe default
+            raise InvalidModeError(mode)
         return mode

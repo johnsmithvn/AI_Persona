@@ -397,10 +397,6 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 #     - TokenGuard only trims/drops
 ```
 
-> [!CAUTION]
-> **Code mismatch:** `_MODE_WEIGHTS` hiện chỉ có 3 modes (RECALL/REFLECT/CHALLENGE).
-> Docs define 5-mode weights. Cần thêm SYNTHESIZE + EXPAND vào `_MODE_WEIGHTS`.
-
 ---
 
 ### 3.8. `app/reasoning/` — Reasoning Layer
@@ -426,13 +422,6 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 # Đây là ORCHESTRATOR. Không trực tiếp query DB.
 ```
 
-> [!CAUTION]
-> **Code mismatch — CRITICAL:**
-> - Code L37: `_EXTERNAL_KNOWLEDGE_ALLOWED_MODES = {"REFLECT"}` ← **phải đổi thành `{"EXPAND"}`**
-> - Code L40: `MIN_CONTEXT_TOKENS = 800` ← **phải xóa, thay bằng mode-based rule**
-> - Code L84-88: Token-threshold conditional ← **phải đổi thành `if mode == "EXPAND"`**
-> - Docs đã migrate sang EXPAND-only. Code chưa.
-
 #### `app/reasoning/mode_controller.py`
 
 ```python
@@ -450,14 +439,10 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 #     EXPAND     → mở rộng, cite memory_id, external bật
 #
 # Modes: RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
+#
+# VALID_MODES = frozenset(MODE_INSTRUCTIONS.keys())
+# Raises InvalidModeError (422) on bad mode input
 ```
-
-> [!CAUTION]
-> **Code mismatch — 3-mode only:**
-> - Code: `VALID_MODES = {"RECALL", "REFLECT", "CHALLENGE"}` — thiếu SYNTHESIZE + EXPAND
-> - Code: `_validate()` fallback về RECALL khi mode không hợp lệ (silent fail, không raise)
-> - Docs: 5 modes (RECALL/SYNTHESIZE/REFLECT/CHALLENGE/EXPAND)
-> - **Fix:** Thêm SYNTHESIZE + EXPAND vào `VALID_MODES`, raise `InvalidModeError` thay vì silent fallback
 
 #### `app/reasoning/prompt_builder.py`
 
@@ -515,25 +500,15 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 
 #### `app/core/prompts.py`
 
-> [!CAUTION]
-> **Code mismatch — 3-mode only + epistemic conflict:**
-> - `MODE_INSTRUCTIONS`: chỉ có RECALL, REFLECT, CHALLENGE — thiếu SYNTHESIZE + EXPAND
-> - `MODE_POLICIES`: chỉ có 3 modes — thiếu SYNTHESIZE + EXPAND
-> - **CRITICAL:** `REFLECT.can_use_external_knowledge = True` ← **mâu thuẫn với docs (REFLECT = NEVER external)**
-> - **CRITICAL:** REFLECT instruction chứa "you may supplement with external knowledge" ← **phải xóa dòng này**
-> - Docs: chỉ EXPAND được dùng external. REFLECT phải là `can_use_external_knowledge = False`
-> - **Fix:** Thêm SYNTHESIZE + EXPAND entries, đổi REFLECT.can_use_external = False, xóa external mention trong REFLECT instruction
-
 ```python
 # Constants & Templates:
 # - MODE_INSTRUCTIONS: dict[mode → instruction_text]
-#     Current keys: RECALL, REFLECT, CHALLENGE
-#     Missing: SYNTHESIZE, EXPAND
+#     Keys: RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
 # - MODE_POLICIES: dict[mode → ModePolicy]
 #     ModePolicy(can_use_external_knowledge, must_cite_memory_id, can_speculate, description)
-#     Current keys: RECALL, REFLECT, CHALLENGE
-#     Missing: SYNTHESIZE, EXPAND
-#     ⚠️ REFLECT.can_use_external_knowledge = True ← PHẢI đổi thành False
+#     Keys: RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
+#     EXPAND.can_use_external_knowledge = True (duy nhất)
+#     Tất cả modes khác: can_use_external_knowledge = False
 ```
 
 #### `app/core/token_guard.py`

@@ -26,10 +26,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Retired modes: ANALYZE, TEMPORAL_COMPARE → merged into SYNTHESIZE, REFLECT
 
 ### Documented (Code Gaps)
-- `CODEBASE_STRUCTURE.md` — CAUTION blocks: ranking.py (3-mode), service.py (REFLECT+threshold), mode_controller.py (3-mode), prompts.py (3-mode + REFLECT epistemic conflict)
 - `API_DOCS.md` — `metadata_filter` marked NOT_IMPLEMENTED, `content_type` search validation gap noted
 - `API_DOCS.md` — `INVALID_MODE` error code added (422)
-- `TODO.md` — P0: REFLECT epistemic conflict + 5-mode upgrade; P1: expanded migration checklist
+
+### Code Refactored (5-Mode)
+- `prompts.py` — 5-mode instructions + policies, REFLECT.external=False, EXPAND.external=True
+- `mode_controller.py` — VALID_MODES from MODE_INSTRUCTIONS keys, raises InvalidModeError
+- `schemas/query.py` — ModeEnum (5 values), content_type field_validator
+- `service.py` — EXPAND-only external, removed token-threshold + MIN_CONTEXT_TOKENS
+- `ranking.py` — 5-mode weights per DATA_DESIGN 7.2.1
+- `exceptions/handlers.py` — InvalidModeError (422)
+- `prompt_builder.py` — docstring updated to 5 modes
+- `CODEBASE_STRUCTURE.md` — all CAUTION blocks removed, specs updated
 
 ---
 

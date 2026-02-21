@@ -2,24 +2,25 @@
 
 > **Version:** v0.1.2
 > **Last Updated:** 2026-02-21
-> **Status:** Files recreated (3-mode) → REFLECT epistemic conflict → 5-mode code migration next
+> **Status:** Code refactored to 5-mode → docs synced → manual end-to-end test next
 
 ---
 
 ## 🔥 P0 — Phải làm ngay (trước khi dùng thực tế)
 
 - [ ] **Setup `.env`** — copy `.env.example` → `.env`, điền `OPENAI_API_KEY`
-- [ ] **🔴 Fix REFLECT epistemic conflict (code mâu thuẫn docs):**
-  - [ ] `prompts.py`: đổi `REFLECT.can_use_external_knowledge = True` → `False`
-  - [ ] `prompts.py`: xóa dòng "you may supplement with external knowledge" trong REFLECT instruction
-  - [ ] `service.py`: đổi `_EXTERNAL_KNOWLEDGE_ALLOWED_MODES = {"REFLECT"}` → `{"EXPAND"}`
-  - [ ] `service.py`: xóa `MIN_CONTEXT_TOKENS = 800` + token-threshold conditional
-  - [ ] `service.py`: thay bằng `if mode == "EXPAND": external_knowledge_used = True`
-- [ ] **🔴 Upgrade 3 files to 5-mode:**
-  - [ ] `prompts.py`: thêm SYNTHESIZE + EXPAND vào `MODE_INSTRUCTIONS` + `MODE_POLICIES`
-  - [ ] `mode_controller.py`: thêm SYNTHESIZE + EXPAND vào `VALID_MODES`
-  - [ ] `mode_controller.py`: raise `InvalidModeError` thay vì silent fallback
-  - [ ] `schemas/query.py`: thêm SYNTHESIZE + EXPAND vào mode validation
+- [x] **✅ Fix REFLECT epistemic conflict:**
+  - [x] `prompts.py`: đổi `REFLECT.can_use_external_knowledge = True` → `False`
+  - [x] `prompts.py`: xóa external mention trong REFLECT instruction
+  - [x] `service.py`: đổi sang EXPAND-only, xóa `MIN_CONTEXT_TOKENS` + token-threshold
+  - [x] `service.py`: thay bằng mode-based rule (`policy.can_use_external_knowledge`)
+- [x] **✅ Upgrade to 5-mode:**
+  - [x] `prompts.py`: thêm SYNTHESIZE + EXPAND vào `MODE_INSTRUCTIONS` + `MODE_POLICIES`
+  - [x] `mode_controller.py`: `VALID_MODES` = 5 modes, raises `InvalidModeError`
+  - [x] `schemas/query.py`: `ModeEnum` với 5 values + `content_type` validator
+  - [x] `ranking.py`: 5-mode weights per DATA_DESIGN 7.2.1
+  - [x] `exceptions/handlers.py`: `InvalidModeError` (422)
+  - [x] `prompt_builder.py`: docstring updated to 5 modes
 - [x] **Chạy Docker** — `docker compose up -d` ✅
 - [x] **Chạy migration** — `alembic upgrade head` ✅ — all 7 indexes created
   - `idx_memory_embedding` (HNSW)
@@ -46,7 +47,7 @@
 
 ## 🟡 P1 — Nên làm sớm
 
-- [ ] **5-Mode code migration** (docs done, code pending)
+- [x] **5-Mode code migration** (completed)
   - [ ] 🔴 Update `_EXTERNAL_KNOWLEDGE_ALLOWED_MODES` → `{"EXPAND"}` in `reasoning/service.py`
   - [ ] 🔴 Remove `MIN_CONTEXT_TOKENS` + token-threshold logic in `reasoning/service.py`
   - [ ] 🔴 Replace token-threshold conditional with `if mode == "EXPAND"` in `reasoning/service.py`

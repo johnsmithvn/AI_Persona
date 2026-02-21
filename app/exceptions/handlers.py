@@ -89,6 +89,16 @@ class TokenBudgetExceededError(AppError):
         )
 
 
+class InvalidModeError(AppError):
+    def __init__(self, mode: str) -> None:
+        valid = "RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND"
+        super().__init__(
+            code="INVALID_MODE",
+            message=f"Invalid mode '{mode}'. Must be one of: {valid}",
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
+
+
 # ─── Response Builder ─────────────────────────────────────────────────────────
 
 def _error_response(

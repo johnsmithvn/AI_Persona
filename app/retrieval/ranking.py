@@ -18,21 +18,31 @@ from app.core.token_guard import BudgetedMemory
 
 settings = get_settings()
 
-# Mode-specific weight overrides
+# Mode-specific weight overrides (5-mode system — see DATA_DESIGN 7.2.1)
 _MODE_WEIGHTS: dict[str, dict[str, float]] = {
     "RECALL": {
         "semantic": 0.70,
+        "recency": 0.10,
+        "importance": 0.20,
+    },
+    "SYNTHESIZE": {
+        "semantic": 0.60,
         "recency": 0.05,
-        "importance": 0.25,
+        "importance": 0.35,
     },
     "REFLECT": {
-        "semantic": 0.55,
-        "recency": 0.20,
-        "importance": 0.25,
+        "semantic": 0.40,
+        "recency": 0.30,
+        "importance": 0.30,
     },
     "CHALLENGE": {
-        "semantic": 0.65,
+        "semantic": 0.50,
         "recency": 0.10,
+        "importance": 0.40,
+    },
+    "EXPAND": {
+        "semantic": 0.70,
+        "recency": 0.05,
         "importance": 0.25,
     },
 }
