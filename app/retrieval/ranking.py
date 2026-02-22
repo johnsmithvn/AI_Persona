@@ -48,11 +48,41 @@ _MODE_WEIGHTS: dict[str, dict[str, float]] = {
 }
 
 
+_NEUTRAL_PROFILE = "NEUTRAL"
+_NEUTRAL_WEIGHTS = {
+    "semantic": settings.ranking_weight_semantic,
+    "recency": settings.ranking_weight_recency,
+    "importance": settings.ranking_weight_importance,
+}
+
+
+def get_ranking_profile(mode: Optional[str]) -> str:
+    """
+    Resolve ranking profile name from mode input.
+
+    /search passes None -> NEUTRAL profile.
+    /query passes one of the 5 reasoning modes -> mode profile.
+    Unknown inputs fall back to NEUTRAL.
+    """
+    if not mode:
+        return _NEUTRAL_PROFILE
+
+    normalized = mode.upper().strip()
+    return normalized if normalized in _MODE_WEIGHTS else _NEUTRAL_PROFILE
+
+
+def _get_weights(mode: Optional[str]) -> dict[str, float]:
+    profile = get_ranking_profile(mode)
+    if profile == _NEUTRAL_PROFILE:
+        return _NEUTRAL_WEIGHTS
+    return _MODE_WEIGHTS[profile]
+
+
 def compute_final_score(
     similarity: float,
     created_at: datetime,
     importance: Optional[float],
-    mode: str = "RECALL",
+    mode: Optional[str] = None,
     half_life_days: Optional[float] = None,
 ) -> float:
     """
@@ -62,14 +92,12 @@ def compute_final_score(
         similarity: Cosine similarity (0–1). Higher = more relevant.
         created_at: Timestamp of the memory record.
         importance: importance_score (0–1), defaults to 0.5 if None.
-        mode: Reasoning mode (determines weighting).
+        mode:
+            Reasoning mode (determines weighting) for /query.
+            None (or invalid) uses neutral ranking weights for /search.
         half_life_days: Exponential decay half-life in days. Defaults to settings value.
     """
-    weights = _MODE_WEIGHTS.get(mode, {
-        "semantic": settings.ranking_weight_semantic,
-        "recency": settings.ranking_weight_recency,
-        "importance": settings.ranking_weight_importance,
-    })
+    weights = _get_weights(mode)
 
     hl = half_life_days or settings.ranking_recency_half_life_days
 

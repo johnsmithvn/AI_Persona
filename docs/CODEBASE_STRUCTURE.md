@@ -2,7 +2,7 @@
 
 > **Project:** AI Person — Personal Memory-First AI System  
 > **Version:** V1 (v0.3.0)  
-> **Last Updated:** 2026-02-21  
+> **Last Updated:** 2026-02-22  
 > **Framework:** FastAPI + SQLAlchemy 2.0 (async)  
 > **Language:** Python 3.11+
 
@@ -277,7 +277,6 @@ Reasoning → KHÔNG query DB trực tiếp
 # - MemoryCreateRequest
 #     raw_text: str (required)
 #     content_type: ContentTypeEnum (default: 'note')
-#     source_type: SourceTypeEnum (default: 'manual')
 #     metadata: dict (optional)
 #     importance_score: float (optional, 0.0–1.0)
 #
@@ -304,6 +303,8 @@ Reasoning → KHÔNG query DB trực tiếp
 # - SearchResponse
 #     results: list[MemorySearchResult]
 #     total: int
+#     query: str
+#     ranking_profile: str  # NEUTRAL on /search
 ```
 
 #### `app/schemas/query.py`
@@ -403,7 +404,8 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 ```python
 # compute_final_score(similarity, created_at, importance, mode=None)
 #
-# Trọng số thay đổi theo mode (5-mode system):
+# /search: mode=None -> NEUTRAL profile (0.60 / 0.15 / 0.25)
+# /query: mode in 5-mode system -> mode-aware weights:
 # - RECALL     → semantic 0.70, recency 0.10, importance 0.20
 # - SYNTHESIZE → semantic 0.60, recency 0.05, importance 0.35  (giảm recency, tăng importance)
 # - REFLECT    → semantic 0.40, recency 0.30, importance 0.30  (tăng recency để thấy evolution)

@@ -2,7 +2,7 @@
 
 > **Project:** AI Person — Personal Memory-First AI System  
 > **Version:** V1 (v0.3.0)  
-> **Last Updated:** 2026-02-21  
+> **Last Updated:** 2026-02-22  
 > **Author:** tunghnhn9x@gmail.com  
 > **Status:** Implementation In Progress
 
@@ -207,7 +207,6 @@ MemoryRecord {
     id: UUID
     raw_text: TEXT (bất biến)
     content_type: ENUM
-    source_type: ENUM
     embedding: vector(1536)
     embedding_model: VARCHAR
     checksum: SHA256(raw_text)
@@ -219,6 +218,8 @@ MemoryRecord {
     is_summary: BOOLEAN (default false)
 }
 ```
+
+`source_type` top-level đã bị loại bỏ từ v0.3.0. Nguồn gốc dữ liệu lưu trong `metadata.source`.
 
 **Pipeline lưu trữ (2 giai đoạn — KHÔNG embed trực tiếp):**
 
@@ -412,7 +413,7 @@ API Layer (POST /search)
 RetrievalService.search()
   ├── Embed query (active embedding_model)
   ├── Execute SQL (cosine + filter + embedding_model match)
-  ├── Apply ranking formula
+  ├── Apply neutral ranking profile (0.60 semantic / 0.15 recency / 0.25 importance)
   └── Return ranked memory list
 ```
 

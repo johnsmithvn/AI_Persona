@@ -52,6 +52,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - `IMPLEMENTATION_PLAN.md` — Phase 4 checklist + test scenarios + deliverables updated to 5-mode
 - `CODEBASE_STRUCTURE.md` — ModeController (5-mode), ranking.py (mode-aware weights), service.py (Source Decision Layer)
 - `DATA_DESIGN.md` — section 7.2.1: Mode-Aware Ranking Weights table + app-layer architecture note
+- `/api/v1/search` ranking profile standardized to **NEUTRAL** (`0.60/0.15/0.25`)
+- `/api/v1/query` keeps mode-aware ranking profiles (5 modes)
+- `SearchResponse` now includes `ranking_profile` for ranking-debug clarity
+- Removed stale `source_type` schema references from structure docs (`CODEBASE_STRUCTURE.md`, `PROJECT_STRUCTURE.md`)
 - Epistemic boundary: token-threshold (800) retired → mode-based (EXPAND = external ON)
 - Retired modes: ANALYZE, TEMPORAL_COMPARE → merged into SYNTHESIZE, REFLECT
 
@@ -68,6 +72,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - `exceptions/handlers.py` — InvalidModeError (422)
 - `prompt_builder.py` — docstring updated to 5 modes
 - `CODEBASE_STRUCTURE.md` — all CAUTION blocks removed, specs updated
+- `app/retrieval/ranking.py` — neutral profile fallback (`mode=None`) + `get_ranking_profile()`
+- `app/retrieval/search.py` — `SearchFilters.mode` optional; logs resolved ranking profile
+- `app/schemas/search.py` — `SearchResponse.ranking_profile` added
+- `app/api/search.py` — response includes resolved `ranking_profile`
 
 ---
 
@@ -163,7 +171,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
-[Unreleased]: https://github.com/username/ai-person/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/username/ai-person/compare/v0.3.0...HEAD
 [0.2.0]: https://github.com/username/ai-person/compare/v0.1.3...v0.2.0
 [0.1.3]: https://github.com/username/ai-person/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/username/ai-person/compare/v0.1.1...v0.1.2

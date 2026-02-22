@@ -25,7 +25,7 @@ from app.core.token_guard import BudgetedMemory
 from app.exceptions.handlers import RetrievalError
 from app.llm.embedding_adapter import EmbeddingAdapter
 from app.logging.logger import logger
-from app.retrieval.ranking import compute_final_score, deduplicate_memories
+from app.retrieval.ranking import compute_final_score, deduplicate_memories, get_ranking_profile
 
 settings = get_settings()
 
@@ -39,7 +39,9 @@ class SearchFilters:
     limit: int = 30
     metadata_filter: Optional[dict[str, Any]] = None
     include_summaries: bool = False
-    mode: str = "RECALL"
+    # /search uses None -> NEUTRAL ranking profile.
+    # /query passes reasoning mode -> mode-aware ranking profile.
+    mode: Optional[str] = None
 
 
 class RetrievalService:
@@ -92,7 +94,7 @@ class RetrievalService:
         Full semantic search pipeline:
         1. Embed query (via EmbeddingAdapter — never direct OpenAI call)
         2. Execute SQL with cosine + filters + embedding_model isolation
-        3. Apply ranking formula (mode-aware)
+        3. Apply ranking formula (neutral for /search, mode-aware for /query)
         4. Deduplicate
         5. Return ranked list (no token budget — that's TokenGuard's job)
         """
@@ -125,6 +127,7 @@ class RetrievalService:
             return []
 
         # Step 3: Apply ranking formula
+        ranking_profile = get_ranking_profile(filters.mode)
         ranked: list[BudgetedMemory] = []
         for row in rows:
             final_score = compute_final_score(
@@ -153,6 +156,11 @@ class RetrievalService:
         # Step 5: Return top N
         logger.info(
             "retrieval_complete",
-            extra={"total_candidates": len(rows), "after_dedup": len(ranked), "mode": filters.mode},
+            extra={
+                "total_candidates": len(rows),
+                "after_dedup": len(ranked),
+                "ranking_profile": ranking_profile,
+                "mode_input": filters.mode,
+            },
         )
         return ranked[: filters.limit]

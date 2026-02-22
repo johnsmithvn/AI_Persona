@@ -35,7 +35,7 @@
 | `conversation` | Chat, bình luận | Nội dung dạng đối thoại |
 | `reflection` | Quan điểm cá nhân | Phục vụ REFLECT mode |
 | `idea` | Ý tưởng | Có thể phát triển thêm |
-| `article` | Kiến thức, link, repo, video, nhạc | Nội dung học được từ bên ngoài |
+| `article` | Kiến thức, link, repo, video, nhạc, câu nói hay , quote | Nội dung học được từ bên ngoài |
 | `log` | Dữ kiện có cấu trúc | Chi tiêu, todo, tracking |
 
 > ⚠️ Các loại cũ (`quote`, `repo`, `pdf`, `transcript`) đã được gộp vào `note` hoặc `article`.

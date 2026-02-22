@@ -127,7 +127,13 @@ Selective forgetting: soft-archive memory. **`raw_text` không bao giờ bị x�
 
 ### 2.1 POST `/api/v1/search` — Semantic Search
 
-Tìm kiếm memory bằng ngôn ngữ tự nhiên. Kết quả được xếp hạng theo ranking formula (mode-aware weights — xem DATA_DESIGN 7.2.1).
+Tìm kiếm memory bằng ngôn ngữ tự nhiên.
+`/api/v1/search` luôn dùng **neutral ranking profile** để tính `final_score`:
+- semantic: `0.60`
+- recency: `0.15`
+- importance: `0.25`
+
+Mode-aware ranking chỉ áp dụng trong `/api/v1/query` (vì endpoint này có field `mode`).
 
 **Request Body:**
 
@@ -173,7 +179,8 @@ Tìm kiếm memory bằng ngôn ngữ tự nhiên. Kết quả được xếp h�
         }
     ],
     "total": 1,
-    "query": "Tôi đã nghiên cứu gì về LoRA?"
+    "query": "Tôi đã nghiên cứu gì về LoRA?",
+    "ranking_profile": "NEUTRAL"
 }
 ```
 
@@ -181,6 +188,7 @@ Tìm kiếm memory bằng ngôn ngữ tự nhiên. Kết quả được xếp h�
 |---|---|
 | `similarity` | Raw cosine similarity (`0.0` – `1.0`) |
 | `final_score` | Composite ranking score (semantic + recency + importance) |
+| `ranking_profile` | Profile dùng để tính `final_score`. `/search` luôn là `NEUTRAL` |
 | `total` | Số lượng kết quả trả về |
 
 ---

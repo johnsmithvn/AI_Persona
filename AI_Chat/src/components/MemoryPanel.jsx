@@ -98,34 +98,61 @@ export default function MemoryPanel() {
     setJsonError(null);
     setAlert(null);
 
-    let payload;
+    let parsed;
     try {
-      payload = JSON.parse(jsonText);
+      parsed = JSON.parse(jsonText);
     } catch (e) {
       setJsonError(`Invalid JSON: ${e.message}`);
       return;
     }
 
-    if (!payload.raw_text || !payload.raw_text.trim()) {
-      setJsonError("raw_text is required and cannot be empty.");
+    // Normalize: single object → array of 1
+    const items = Array.isArray(parsed) ? parsed : [parsed];
+
+    if (items.length === 0) {
+      setJsonError("Array is empty.");
       return;
     }
 
+    // Validate all items first
+    for (let i = 0; i < items.length; i++) {
+      if (!items[i].raw_text || !items[i].raw_text.trim()) {
+        setJsonError(`Item ${i + 1}: raw_text is required and cannot be empty.`);
+        return;
+      }
+    }
+
     setSaving(true);
-    try {
-      const result = await saveMemory({
-        raw_text: payload.raw_text,
-        content_type: payload.content_type || "note",
-        importance_score: payload.importance_score ?? undefined,
-        metadata: payload.metadata || {},
-      });
+    let saved = 0;
+    let failed = 0;
+    let lastError = "";
+
+    for (const item of items) {
+      try {
+        await saveMemory({
+          raw_text: item.raw_text,
+          content_type: item.content_type || "note",
+          importance_score: item.importance_score ?? undefined,
+          metadata: item.metadata || {},
+        });
+        saved++;
+      } catch (err) {
+        failed++;
+        lastError = err.message;
+      }
+    }
+
+    if (failed === 0) {
       setAlert({
         type: "success",
-        message: `✅ Saved! ID: ${result.id.slice(0, 8)}... | Embedding job created.`,
+        message: `✅ Saved ${saved}/${items.length} memories! Embedding jobs created.`,
       });
       setJsonText(JSON_TEMPLATE);
-    } catch (err) {
-      setAlert({ type: "error", message: err.message });
+    } else {
+      setAlert({
+        type: "error",
+        message: `⚠ Saved ${saved}, failed ${failed}. Last error: ${lastError}`,
+      });
     }
     setSaving(false);
   };

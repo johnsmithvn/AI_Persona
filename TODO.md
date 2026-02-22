@@ -1,7 +1,7 @@
 # TODO — AI Person (Bộ Não Thứ 2)
 
 > **Version:** v0.3.0
-> **Last Updated:** 2026-02-21
+> **Last Updated:** 2026-02-22
 > **Status:** Memory Contract V1 + CLI V1 + Chat UI V1 + Reasoning safety → E2E test
 
 ---
@@ -34,6 +34,11 @@
   - [x] REFLECT "No Psychological Inference" guard
   - [x] Citation format instruction in PromptBuilder
   - [x] `PolicyViolationError` exception class
+- [x] **✅ Ranking alignment fix (docs + code):**
+  - [x] `/api/v1/search` dùng neutral ranking profile (0.60/0.15/0.25)
+  - [x] `/api/v1/query` giữ mode-aware ranking (5 mode)
+  - [x] `SearchResponse` thêm `ranking_profile` để debug
+  - [x] Đồng bộ `API_DOCS`, `DATA_DESIGN`, `CODEBASE_STRUCTURE`, `PROJECT_STRUCTURE`
 - [x] **ENUM → VARCHAR migration** (003) — fixes asyncpg type mismatch
 
 - [ ] **Setup `.env`** — copy `.env.example` → `.env`, điền `OPENAI_API_KEY`
@@ -95,7 +100,7 @@
 - [ ] **Cập nhật GitHub repo URLs trong `CHANGELOG.md`** (khi có remote)
 - [ ] **Cập nhật Project Context** trong `PROMPT.md` skill:
   - `Project name:` AI Person — Bộ Não Thứ 2
-  - `Current version:` v0.1.1
+  - `Current version:` v0.3.0
   - `Tech stack:` FastAPI, SQLAlchemy 2.0, asyncpg, pgvector, OpenAI
   - `Current progress:` All phases complete, pending first real run
 
@@ -118,7 +123,7 @@
 
 - [x] **Phase 1: Foundation** — DB, ORM (3 tables + 7 indexes), migration, session, config, logging, exceptions
 - [x] **Phase 2: Memory Infrastructure** — MemoryService, EmbeddingWorker, repository, embedding adapters
-- [x] **Phase 3: Retrieval Engine** — RetrievalService, ranking formula (mode-aware), diversity guard, TokenGuard
+- [x] **Phase 3: Retrieval Engine** — RetrievalService, ranking formula (neutral `/search` + mode-aware `/query`), diversity guard, TokenGuard
 - [x] **Phase 4: Reasoning Layer** — ReasoningService, ModeController, PromptBuilder, LLM adapters
 - [x] **Phase 5: API Layer** — memory / search / query endpoints, deps DI, main.py, CORS, correlation ID middleware
 - [x] **Documentation** — README.md, .env.example, docker-compose.yml, personalities/default.yaml

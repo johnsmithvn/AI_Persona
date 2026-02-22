@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.deps import get_embedding_adapter
 from app.llm.embedding_adapter import EmbeddingAdapter
+from app.retrieval.ranking import get_ranking_profile
 from app.retrieval.search import RetrievalService, SearchFilters
 from app.schemas.search import MemorySearchResult, SearchRequest, SearchResponse
 
@@ -22,7 +23,8 @@ async def search_memories(
 ) -> SearchResponse:
     """
     Semantic search over memory records.
-    Returns ranked results with final_score based on semantic + recency + importance.
+    Uses neutral ranking profile for final_score:
+    semantic + recency + importance with default app weights (0.60/0.15/0.25).
     """
     retrieval = RetrievalService(db, embedding_adapter)
     filters = SearchFilters(
@@ -35,6 +37,7 @@ async def search_memories(
         include_summaries=request.include_summaries,
     )
     memories = await retrieval.search(request.query, filters)
+    ranking_profile = get_ranking_profile(filters.mode)
 
     results = [
         MemorySearchResult(
@@ -51,4 +54,9 @@ async def search_memories(
         for m in memories
     ]
 
-    return SearchResponse(results=results, total=len(results), query=request.query)
+    return SearchResponse(
+        results=results,
+        total=len(results),
+        query=request.query,
+        ranking_profile=ranking_profile,
+    )

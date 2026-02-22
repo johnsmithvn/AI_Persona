@@ -2,7 +2,7 @@
 
 > **Project:** AI Person — Personal Memory-First AI System  
 > **Version:** v0.3.0  
-> **Last Updated:** 2026-02-21  
+> **Last Updated:** 2026-02-22  
 > **Database:** PostgreSQL 16 + pgvector  
 > **ORM:** SQLAlchemy 2.0 (async)  
 > **Migration:** Alembic  
@@ -286,7 +286,7 @@ Không bao giờ chỉ dùng cosine similarity. Phải có **scoring formula t�
 final_score = (w1 × semantic_score) + (w2 × recency_score) + (w3 × importance_score)
 ```
 
-**Trọng số mặc định (Recall cao):**
+**Trọng số mặc định (Neutral cho `/search`):**
 
 | Trọng số | Giá trị | Ý nghĩa |
 |---|---|---|
@@ -294,13 +294,10 @@ final_score = (w1 × semantic_score) + (w2 × recency_score) + (w3 × importance
 | w2 (recency) | 0.15 | 15% ưu tiên memory mới |
 | w3 (importance) | 0.25 | 25% ưu tiên memory quan trọng |
 ⚠️ Lưu ý:
-Trọng số trên là mặc định.
-Retrieval có thể điều chỉnh trọng số theo mode:
+Trọng số trên là profile trung lập cho endpoint `/api/v1/search`.
+Mode-aware weights chỉ dùng trong `/api/v1/query` (vì có `mode`).
 
-- RECALL: có thể giảm hoặc bỏ recency
-- REFLECT: giữ recency
-- CHALLENGE: recency thấp
-### 7.2. Query SQL Chuẩn — Recall Cao
+### 7.2. Query SQL Chuẩn — App Layer Scoring
 
 ```sql
 WITH candidates AS (
@@ -337,42 +334,40 @@ SELECT
     created_at,
     metadata,
     is_summary,
-    similarity,
-    -- Final ranking score
-    (
-        0.60 * similarity
-      + 0.15 * EXP(
-    - EXTRACT(EPOCH FROM (NOW() - created_at)) 
-      / (86400.0 * 30.0)
-)
-      + 0.25 * COALESCE(importance_score, 0.5)
-    ) AS final_score
+    similarity
 FROM candidates
-ORDER BY final_score DESC
-LIMIT 30;
+ORDER BY similarity DESC;
 
 
 ```
-- $7 = include_summaries (BOOLEAN, default false). Khi SYNTHESIZE/REFLECT cần dùng summary: truyền $7 = true.
+- $7 = include_summaries (BOOLEAN, default false). V1 chưa tự bật theo mode.
 - Recency dùng exponential decay thay vì inverse linear decay.
 - Half-life mặc định = 30 ngày.
 
-### 7.2.1 Mode-Aware Ranking Weights (5-Mode)
+### 7.2.1 Ranking Profiles (Neutral + 5-Mode)
 
-SQL chỉ tính `similarity` và `recency_decay`. Final composite score được tính ở **app layer** (`retrieval/ranking.py`) để support mode-aware weights:
+SQL chỉ lấy candidate theo `similarity`.
+`final_score` được tính ở **app layer** (`retrieval/ranking.py`) theo profile:
+- `/api/v1/search` → `NEUTRAL` (0.60 / 0.15 / 0.25)
+- `/api/v1/query` → mode-aware (5 mode)
 
 | Mode | Semantic | Recency | Importance | Lý Do |
 |---|---|---|---|---|
+| **NEUTRAL** (`/search`) | 0.60 | 0.15 | 0.25 | Ranking trung lập cho semantic search API |
 | **RECALL** | 0.70 | 0.10 | 0.20 | Focus đúng memory, giảm recency bias |
 | **SYNTHESIZE** | 0.60 | 0.05 | 0.35 | Gom toàn bộ knowledge, importance cao |
 | **REFLECT** | 0.40 | 0.30 | 0.30 | Cần thấy evolution theo thời gian |
 | **CHALLENGE** | 0.50 | 0.10 | 0.40 | Focus logic/mâu thuẫn, không thiên recency |
 | **EXPAND** | 0.70 | 0.05 | 0.25 | Semantic cao vì cần tìm đúng memory để bổ sung external |
 
-> ⚠️ **Architecture note:** `final_score` KHÔNG hardcode trong SQL. SQL chỉ trả `similarity` + `recency_decay` raw. App layer tính composite theo mode.
+> ⚠️ **Architecture note:** `final_score` KHÔNG hardcode trong SQL.
+> SQL trả candidate + `similarity`; app layer tính recency decay + composite score.
 
 ```python
 # App layer (retrieval/ranking.py)
+# /search: mode=None -> NEUTRAL weights from settings
+NEUTRAL_WEIGHTS = {"semantic": 0.60, "recency": 0.15, "importance": 0.25}
+
 MODE_WEIGHTS = {
     "RECALL":     {"semantic": 0.70, "recency": 0.10, "importance": 0.20},
     "SYNTHESIZE": {"semantic": 0.60, "recency": 0.05, "importance": 0.35},

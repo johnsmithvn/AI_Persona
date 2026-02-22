@@ -49,3 +49,7 @@ class SearchResponse(BaseModel):
     results: list[MemorySearchResult]
     total: int
     query: str
+    ranking_profile: str = Field(
+        default="NEUTRAL",
+        description="Ranking profile used for final_score calculation. /search always returns NEUTRAL.",
+    )

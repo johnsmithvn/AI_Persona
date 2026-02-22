@@ -2,7 +2,7 @@
 
 > **Project:** AI Person — Personal Memory-First AI System  
 > **Version:** V1 (v0.3.0)  
-> **Last Updated:** 2026-02-21  
+> **Last Updated:** 2026-02-22  
 > **Estimated Timeline:** 6–8 tuần  
 > **Status:** Memory Contract V1 locked, Reasoning Layer safety fixes applied
 
@@ -188,7 +188,7 @@ volumes:
 [x] Filter: metadata JSONB
 [x] Distance threshold (< 0.7)
 [x] Candidate pool (500)
-[x] Ranking formula configurable theo mode
+[x] Ranking profile tách bạch: `/search` neutral, `/query` mode-aware
 [x] Diversity guard (cosine > 0.95 → giữ 1)
 [x] TokenGuard.check_budget() cơ bản
 [ ] POST /api/v1/search hoạt động  ← pending end-to-end test
@@ -450,7 +450,7 @@ DEBUG=false
 
 ### Milestone 3: "Search Works" (End of Phase 3)
 - [ ] POST `/api/v1/search` trả kết quả semantic search
-- [ ] Ranking formula cho kết quả hợp lý
+- [ ] `/search` dùng neutral ranking (0.60/0.15/0.25) cho kết quả hợp lý
 - [ ] Filter theo content_type, time range hoạt động
 - [ ] Threshold loại bỏ memory không liên quan
 
