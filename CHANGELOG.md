@@ -15,6 +15,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - `cli/registry.py` — content_type, tag, type menus (mirrors MEMORY_CONTRACT.md)
 - `cli/person_helpers.py` — person name normalization + suggestion
 - `MemoryRepository.get_distinct_person_names()` — JSONB query for CLI person flow
+- `AI_Chat/` — React chat UI (Vite) with 5-mode reasoning, memory management, semantic search
+- `AI_Chat/src/api/client.js` — fetch wrapper for all 6 API endpoints
+- `.\ ai chat` command in `ai.ps1` — launches React dev server
 - `validate_citations()` in `ReasoningService` — enforces `[Memory N]` citation format, detects fabricated references
 - `PolicyViolationError` exception for mode policy violations
 - `CITATION_FORMAT_RULE` shared constant across all mode instructions

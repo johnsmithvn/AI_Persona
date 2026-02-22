@@ -87,6 +87,21 @@ ai-person/
 │   ├── registry.py                   # Content type, tag, type menus
 │   └── person_helpers.py             # Person name normalize + suggest
 │
+├── AI_Chat/                          # React chat UI (Vite)
+│   ├── src/
+│   │   ├── api/client.js             # API client (6 endpoints)
+│   │   ├── components/
+│   │   │   ├── ChatPanel.jsx         # 5-mode reasoning chat
+│   │   │   ├── MemoryPanel.jsx       # Add + lookup memory
+│   │   │   ├── SearchPanel.jsx       # Semantic search + filters
+│   │   │   └── Sidebar.jsx           # Navigation + status
+│   │   ├── App.jsx                   # Layout + health polling
+│   │   ├── App.css                   # Component styles
+│   │   ├── index.css                 # Design system (dark theme)
+│   │   └── main.jsx                  # Entry point
+│   ├── index.html
+│   └── package.json
+│
 ├── workers/                          # Background worker entrypoints
 │   ├── __init__.py
 │   └── run_embedding.py              # CLI entry: python -m workers.run_embedding
@@ -138,6 +153,7 @@ ai-person/
 | **Core** | `app/core/` | Personality, prompts, token budget | DB operations |
 | **DB** | `app/db/` | Session, ORM models, migrations | Business logic |
 | **CLI** | `cli/` | Interactive ingestion (reuses MemoryService) | Query DB trực tiếp, bypass schema |
+| **Chat UI** | `AI_Chat/` | React frontend, calls API qua HTTP | Business logic, DB access |
 | **Workers** | `workers/` | Background job execution | HTTP handling |
 | **Exceptions** | `app/exceptions/` | Error classes, error handlers | Business logic |
 | **Logging** | `app/logging/` | Structured logging, correlation ID | Business logic |

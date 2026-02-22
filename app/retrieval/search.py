@@ -65,7 +65,7 @@ class RetrievalService:
               AND exclude_from_retrieval = false
               AND is_archived = false
               AND embedding_model = :embedding_model
-              AND (:content_type IS NULL OR CAST(:content_type AS text) = '' OR content_type = CAST(:content_type AS content_type))
+              AND (:content_type IS NULL OR content_type = :content_type)
               AND (:start_date IS NULL OR created_at >= :start_date)
               AND (:end_date IS NULL OR created_at <= :end_date)
               AND (embedding <=> CAST(:embedding AS vector)) < :threshold
@@ -107,7 +107,7 @@ class RetrievalService:
                 {
                     "embedding": embedding_str,
                     "embedding_model": self._adapter.model_name,
-                    "content_type": filters.content_type or "",
+                    "content_type": filters.content_type or None,
                     "start_date": filters.start_date,
                     "end_date": filters.end_date,
                     "threshold": filters.threshold,

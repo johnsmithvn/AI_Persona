@@ -29,6 +29,10 @@ switch ($Command) {
     "add" {
         & "$ProjectRoot\venv\Scripts\python.exe" -m cli.add_memory
     }
+    "chat" {
+        Set-Location "$ProjectRoot\AI_Chat"
+        npm run dev
+    }
     default {
         Write-Host ""
         Write-Host "  AI Person CLI v0.3.0" -ForegroundColor Cyan
@@ -38,6 +42,7 @@ switch ($Command) {
         Write-Host "  .\ai worker   Start Worker only" -ForegroundColor White
         Write-Host "  .\ai migrate  Run migrations" -ForegroundColor White
         Write-Host "  .\ai add      Add memory (interactive)" -ForegroundColor White
+        Write-Host "  .\ai chat     Open Chat UI (React)" -ForegroundColor White
         Write-Host ""
     }
 }

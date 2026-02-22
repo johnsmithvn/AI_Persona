@@ -166,6 +166,17 @@ Interactive flow:
 4. Chọn tags (22 tags cố định)
 5. Xác nhận → lưu qua `MemoryService`
 
+### Chat UI — React (Vite)
+
+```powershell
+.\ai chat
+```
+
+Mở browser tại `http://localhost:5173`. Giao diện gồm 3 tab:
+- **Chat** — Trò chuyện với AI, chọn 1 trong 5 mode (RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND)
+- **Memory** — Thêm memory mới (form) + tra cứu theo ID
+- **Search** — Semantic search với filter (content_type, threshold, limit)
+
 ### Save Memory
 
 ```bash

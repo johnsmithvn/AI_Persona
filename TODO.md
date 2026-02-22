@@ -2,7 +2,7 @@
 
 > **Version:** v0.3.0
 > **Last Updated:** 2026-02-21
-> **Status:** Memory Contract V1 + CLI V1 + Reasoning safety → E2E test
+> **Status:** Memory Contract V1 + CLI V1 + Chat UI V1 + Reasoning safety → E2E test
 
 ---
 
@@ -19,6 +19,14 @@
   - [x] `cli/person_helpers.py` — normalize + suggest
   - [x] `MemoryRepository.get_distinct_person_names()`
   - [x] `ai.ps1` — `.\ai add` command
+- [x] **Chat UI V1 — React (Vite):**
+  - [x] `AI_Chat/src/api/client.js` — all 6 API endpoints
+  - [x] `ChatPanel.jsx` — 5-mode reasoning chat (RECALL/SYNTHESIZE/REFLECT/CHALLENGE/EXPAND)
+  - [x] `MemoryPanel.jsx` — add memory + lookup by ID
+  - [x] `SearchPanel.jsx` — semantic search with filters
+  - [x] `Sidebar.jsx` — navigation + API health status
+  - [x] Dark theme premium design (Inter font, glassmorphism)
+  - [x] `ai.ps1` — `.\ai chat` command
 - [x] **Reasoning Layer Safety Fixes:**
   - [x] RECALL `must_cite_memory_id = True` (was False)
   - [x] `validate_citations()` in ReasoningService — enforces `[Memory N]` format
