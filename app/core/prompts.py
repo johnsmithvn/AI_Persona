@@ -1,5 +1,5 @@
 """
-Mode instructions and policy guards — 5-Mode System.
+Mode instructions and policy guards — reasoning mode system.
 These are the LOCKED V1.1 definitions — change with extreme caution.
 
 Mode instructions form part 2 of the 4-part prompt structure.
@@ -7,6 +7,7 @@ Policies are enforced programmatically in ReasoningService.
 
 Modes:
   RECALL     — retrieve verbatim, no speculation, no external
+  RECALL_LLM_RERANK — LLM-assisted memory selection, deterministic memory output
   SYNTHESIZE — combine knowledge across memories, structured output
   REFLECT    — analyze evolution over time, identify patterns
   CHALLENGE  — critique logic, find contradictions
@@ -46,6 +47,17 @@ MODE_INSTRUCTIONS: dict[str, str] = {
         "\"Không có memory liên quan đến câu hỏi này.\"\n"
         "- Quote or closely paraphrase the memory when possible.\n"
         "- MUST cite the memory reference using [Memory N] for every point.\n"
+        + CITATION_FORMAT_RULE
+    ),
+    "RECALL_LLM_RERANK": (
+        "MODE: RECALL_LLM_RERANK\n"
+        "Your task is to pick the most relevant memories for the query before final recall output.\n"
+        "Rules:\n"
+        "- Use ONLY the provided memory candidates.\n"
+        "- Prioritize direct semantic relevance to user query, avoid broad same-domain noise.\n"
+        "- Do NOT use external knowledge.\n"
+        "- Do NOT rewrite memory content.\n"
+        "- Return selection-ready output grounded in [Memory N].\n"
         + CITATION_FORMAT_RULE
     ),
     "SYNTHESIZE": (
@@ -120,6 +132,12 @@ MODE_POLICIES: dict[str, ModePolicy] = {
         must_cite_memory_id=True,  # P0 fix: RECALL must cite
         can_speculate=False,
         description="Strictly memory-bound retrieval. No external knowledge.",
+    ),
+    "RECALL_LLM_RERANK": ModePolicy(
+        can_use_external_knowledge=False,
+        must_cite_memory_id=False,
+        can_speculate=False,
+        description="LLM-assisted rerank for recall. Final answer is deterministic memory output.",
     ),
     "SYNTHESIZE": ModePolicy(
         can_use_external_knowledge=False,

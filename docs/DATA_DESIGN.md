@@ -344,17 +344,18 @@ ORDER BY similarity DESC;
 - Recency dùng exponential decay thay vì inverse linear decay.
 - Half-life mặc định = 30 ngày.
 
-### 7.2.1 Ranking Profiles (Neutral + 5-Mode)
+### 7.2.1 Ranking Profiles (Neutral + Reasoning Modes)
 
 SQL chỉ lấy candidate theo `similarity`.
 `final_score` được tính ở **app layer** (`retrieval/ranking.py`) theo profile:
 - `/api/v1/search` → `NEUTRAL` (0.60 / 0.15 / 0.25)
-- `/api/v1/query` → mode-aware (5 mode)
+- `/api/v1/query` → mode-aware
 
 | Mode | Semantic | Recency | Importance | Lý Do |
 |---|---|---|---|---|
 | **NEUTRAL** (`/search`) | 0.60 | 0.15 | 0.25 | Ranking trung lập cho semantic search API |
 | **RECALL** | 0.70 | 0.10 | 0.20 | Focus đúng memory, giảm recency bias |
+| **RECALL_LLM_RERANK** | 0.70 | 0.10 | 0.20 | Recall có thêm bước LLM chọn memory liên quan nhất trong candidate pool |
 | **SYNTHESIZE** | 0.60 | 0.05 | 0.35 | Gom toàn bộ knowledge, importance cao |
 | **REFLECT** | 0.40 | 0.30 | 0.30 | Cần thấy evolution theo thời gian |
 | **CHALLENGE** | 0.50 | 0.10 | 0.40 | Focus logic/mâu thuẫn, không thiên recency |
@@ -373,6 +374,7 @@ NEUTRAL_WEIGHTS = {"semantic": 0.60, "recency": 0.15, "importance": 0.25}
 
 MODE_WEIGHTS = {
     "RECALL":     {"semantic": 0.70, "recency": 0.10, "importance": 0.20},
+    "RECALL_LLM_RERANK": {"semantic": 0.70, "recency": 0.10, "importance": 0.20},
     "SYNTHESIZE": {"semantic": 0.60, "recency": 0.05, "importance": 0.35},
     "REFLECT":    {"semantic": 0.40, "recency": 0.30, "importance": 0.30},
     "CHALLENGE":  {"semantic": 0.50, "recency": 0.10, "importance": 0.40},
@@ -390,6 +392,7 @@ MODE_WEIGHTS = {
 - `absolute_similarity_floor = 0.55` (mọi mode đều phải qua).
 - `mode_similarity_floor`:
   - `RECALL = 0.65`
+  - `RECALL_LLM_RERANK = 0.60`
   - `SYNTHESIZE = 0.60`
   - `REFLECT = 0.55`
   - `CHALLENGE = 0.60`
@@ -403,6 +406,7 @@ MODE_WEIGHTS = {
   - `top_final_score - final_score <= 0.15`.
 - Sau đó áp hard cap theo mode:
   - `RECALL = 5`
+  - `RECALL_LLM_RERANK = 12` (LLM re-rank từ pool này rồi trả top 5)
   - `SYNTHESIZE = 8`
   - `REFLECT = 8`
   - `CHALLENGE = 4`

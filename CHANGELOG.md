@@ -65,11 +65,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - `API_DOCS.md` — `metadata_filter` marked NOT_IMPLEMENTED, `content_type` search validation gap noted
 - `API_DOCS.md` — `INVALID_MODE` error code added (422)
 
-### Code Refactored (5-Mode)
+### Code Refactored (Reasoning Modes)
 - `prompts.py` — 5-mode instructions + policies, REFLECT.external=False, EXPAND.external=True
 - `prompts.py` — CHALLENGE mode now prioritizes query-matching memories, enforces Vietnamese output, and uses a 3-part challenge structure.
 - `mode_controller.py` — VALID_MODES from MODE_INSTRUCTIONS keys, raises InvalidModeError
-- `schemas/query.py` — ModeEnum (5 values), content_type field_validator
+- `schemas/query.py` — ModeEnum extended with `RECALL_LLM_RERANK` for LLM-assisted memory selection
 - `service.py` — EXPAND-only external, removed token-threshold + MIN_CONTEXT_TOKENS
 - `ranking.py` — 5-mode weights per DATA_DESIGN 7.2.1
 - `exceptions/handlers.py` — InvalidModeError (422)
@@ -98,6 +98,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - `app/retrieval/ranking.py` — diversity bonus now capped and only applied on high-similarity memories (`similarity >= 0.70`).
 - `app/config.py` — removed unused `retrieval_distance_threshold` setting.
 - `app/config.py` — added `retrieval_query_cooldown_logs` to control replay anti-repeat window.
+- `app/reasoning/service.py` — added `RECALL_LLM_RERANK`: LLM only reranks candidate memory indices, final response remains deterministic memory output.
+- `app/retrieval/search.py` + `app/retrieval/relevance_gate.py` + `app/retrieval/ranking.py` — added mode-specific retrieval profile for `RECALL_LLM_RERANK`.
+- `app/exceptions/handlers.py` + `docs/API_DOCS.md` — invalid mode list and API contract updated for `RECALL_LLM_RERANK`.
 
 ---
 

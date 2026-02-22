@@ -14,7 +14,7 @@
 | `GET` | `/api/v1/memory/{id}` | Lấy memory theo ID |
 | `PATCH` | `/api/v1/memory/{id}/archive` | Archive / soft-delete |
 | `POST` | `/api/v1/search` | Semantic search |
-| `POST` | `/api/v1/query` | Reasoning (5-Mode) |
+| `POST` | `/api/v1/query` | Reasoning (6-Mode) |
 | `GET` | `/health` | Health check |
 
 ---
@@ -214,25 +214,27 @@ Full reasoning pipeline:
 | Field | Type | Required | Default | Ghi Chú |
 |---|---|---|---|---|
 | `query` | `string` | ✅ | — | Question hoặc prompt |
-| `mode` | `string` | ❌ | `"RECALL"` | Enum: `RECALL`, `SYNTHESIZE`, `REFLECT`, `CHALLENGE`, `EXPAND` |
+| `mode` | `string` | ❌ | `"RECALL"` | Enum: `RECALL`, `RECALL_LLM_RERANK`, `SYNTHESIZE`, `REFLECT`, `CHALLENGE`, `EXPAND` |
 | `content_type` | `string` | ❌ | `null` | Restrict retrieval to type |
 | `threshold` | `float` | ❌ | `0.45` | Cosine distance threshold. App layer chuyển sang similarity floor theo `similarity = 1 - threshold` |
 
 > **Production Retrieval Gate (v0.3.x):** Sau khi lấy Top-K candidates từ SQL, app layer áp 4 lớp:
-> absolute similarity floor (`>= 0.55`), mode-specific floor (RECALL 0.65, SYNTHESIZE 0.60, REFLECT 0.55, CHALLENGE 0.60, EXPAND 0.52),
-> score-gap filter (`top_final_score - final_score <= 0.15`) và mode hard cap (RECALL 5, SYNTHESIZE 8, REFLECT 8, CHALLENGE 4, EXPAND 10).  
+> absolute similarity floor (`>= 0.55`), mode-specific floor (RECALL 0.65, RECALL_LLM_RERANK 0.60, SYNTHESIZE 0.60, REFLECT 0.55, CHALLENGE 0.60, EXPAND 0.52),
+> score-gap filter (`top_final_score - final_score <= 0.15`) và mode hard cap (RECALL 5, RECALL_LLM_RERANK 12, SYNTHESIZE 8, REFLECT 8, CHALLENGE 4, EXPAND 10).  
 > **Exposure-Aware Diversity (v0.3.x):** /query adds `+0.02 * (1 / (1 + retrieval_count))`, chỉ áp dụng khi `similarity >= 0.70`, bonus cap tối đa `0.02`.
 > `retrieval_count` được suy ra từ `reasoning_logs.memory_ids` (không thêm cột DB mới).
-> **Query Replay Cooldown (v0.3.x):** với `RECALL`/`CHALLENGE`, nếu user lặp lại đúng cùng câu hỏi, memory đã dùng ở vài log gần nhất sẽ bị đẩy xuống sau để tăng cơ hội cho memory khác trong cùng cụm liên quan.
-> **Lexical Anchor (v0.3.x):** ở `RECALL` và `CHALLENGE`, hệ thống cộng thêm lexical bonus nhỏ khi memory chứa keyword trực tiếp từ query.
+> **Query Replay Cooldown (v0.3.x):** với `RECALL`/`RECALL_LLM_RERANK`/`CHALLENGE`, nếu user lặp lại đúng cùng câu hỏi, memory đã dùng ở vài log gần nhất sẽ bị đẩy xuống sau để tăng cơ hội cho memory khác trong cùng cụm liên quan.
+> **Lexical Anchor (v0.3.x):** ở `RECALL`, `RECALL_LLM_RERANK` và `CHALLENGE`, hệ thống cộng thêm lexical bonus nhỏ khi memory chứa keyword trực tiếp từ query.
 > Với `RECALL`, nếu sau gate không còn memory phù hợp, API trả trực tiếp: `"Không có memory liên quan đến câu hỏi này."`
 > Với `RECALL`, nếu có memory phù hợp, API trả deterministic danh sách `[Memory N]` (không gọi LLM để diễn đạt lại).
+> Với `RECALL_LLM_RERANK`, hệ thống gọi LLM để chọn memory index phù hợp nhất từ candidate pool, sau đó vẫn trả deterministic memory gốc (LLM không được rewrite nội dung memory).
 
 #### Modes
 
 | Mode | Hành Vi | External Knowledge |
 |---|---|---|
 | `RECALL` | Trả nguyên văn memory liên quan. Không suy diễn, không thêm bớt | ❌ NEVER |
+| `RECALL_LLM_RERANK` | LLM re-rank candidate memories theo ngữ cảnh query, sau đó trả memory gốc dạng deterministic | ❌ NEVER |
 | `SYNTHESIZE` | Tổng hợp nhiều memory thành structured summary | ❌ NEVER |
 | `REFLECT` | Phân tích evolution tư duy, nhận diện pattern thay đổi | ❌ NEVER |
 | `CHALLENGE` | Chỉ ra mâu thuẫn giữa các memory, logic yếu, gaps | ❌ NEVER |
@@ -307,7 +309,7 @@ Tất cả errors đều trả về format chuẩn. **Không bao giờ leak stac
 | `LLM_ERROR` | `503` | LLM request thất bại |
 | `RETRIEVAL_ERROR` | `500` | Retrieval pipeline lỗi |
 | `TOKEN_BUDGET_EXCEEDED` | `422` | Token budget vượt ngưỡng |
-| `INVALID_MODE` | `422` | Mode không hợp lệ (phải là RECALL/SYNTHESIZE/REFLECT/CHALLENGE/EXPAND) |
+| `INVALID_MODE` | `422` | Mode không hợp lệ (phải là RECALL/RECALL_LLM_RERANK/SYNTHESIZE/REFLECT/CHALLENGE/EXPAND) |
 | `INTERNAL_ERROR` | `500` | Unhandled error (no detail) |
 
 ---
@@ -363,6 +365,17 @@ curl -X POST http://localhost:8000/api/v1/query \
   -d '{
     "query": "Tao từng viết gì về LoRA?",
     "mode": "RECALL"
+  }'
+```
+
+### Query with RECALL_LLM_RERANK mode
+
+```bash
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "những câu nào thật sự liên quan đến chủ đề phước lành",
+    "mode": "RECALL_LLM_RERANK"
   }'
 ```
 

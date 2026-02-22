@@ -43,6 +43,11 @@ _MODE_CONFIGS: dict[str, RelevanceGateConfig] = {
         relative_drop=0.10,
         max_results=5,
     ),
+    "RECALL_LLM_RERANK": RelevanceGateConfig(
+        min_similarity=0.60,
+        relative_drop=0.12,
+        max_results=10,
+    ),
     "SYNTHESIZE": RelevanceGateConfig(
         min_similarity=0.60,
         relative_drop=0.12,

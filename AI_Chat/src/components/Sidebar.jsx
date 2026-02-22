@@ -1,13 +1,3 @@
-import { useState } from "react";
-
-const MODES = [
-  { key: "RECALL", label: "Recall", desc: "Tra cứu nguyên văn từ memory" },
-  { key: "SYNTHESIZE", label: "Synthesize", desc: "Tổng hợp nhiều memory thành summary" },
-  { key: "REFLECT", label: "Reflect", desc: "Phân tích sự thay đổi tư duy" },
-  { key: "CHALLENGE", label: "Challenge", desc: "Chỉ ra mâu thuẫn, logic yếu" },
-  { key: "EXPAND", label: "Expand", desc: "Mở rộng với external knowledge" },
-];
-
 export default function Sidebar({ activeView, onChangeView, online }) {
   const views = [
     { key: "chat", icon: "💬", label: "Chat" },
@@ -22,7 +12,7 @@ export default function Sidebar({ activeView, onChangeView, online }) {
           <div className="logo-icon">🧠</div>
           <h1>AI Person</h1>
         </div>
-        <div className="sidebar-version">v0.3.0 — Bộ Não Thứ 2</div>
+        <div className="sidebar-version">v0.3.0 - Bo Nao Thu 2</div>
       </div>
 
       <nav className="sidebar-nav">

@@ -91,7 +91,7 @@ class TokenBudgetExceededError(AppError):
 
 class InvalidModeError(AppError):
     def __init__(self, mode: str) -> None:
-        valid = "RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND"
+        valid = "RECALL, RECALL_LLM_RERANK, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND"
         super().__init__(
             code="INVALID_MODE",
             message=f"Invalid mode '{mode}'. Must be one of: {valid}",

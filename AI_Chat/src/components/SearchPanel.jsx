@@ -2,7 +2,7 @@ import { useState } from "react";
 import { searchMemories } from "../api/client";
 
 const CONTENT_TYPES = [
-  { value: "", label: "Tất cả" },
+  { value: "", label: "Tat ca" },
   { value: "note", label: "Note" },
   { value: "conversation", label: "Conversation" },
   { value: "reflection", label: "Reflection" },
@@ -14,7 +14,7 @@ const CONTENT_TYPES = [
 export default function SearchPanel() {
   const [query, setQuery] = useState("");
   const [contentType, setContentType] = useState("");
-  const [threshold, setThreshold] = useState(0.7);
+  const [threshold, setThreshold] = useState(0.45);
   const [limit, setLimit] = useState(10);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -47,8 +47,8 @@ export default function SearchPanel() {
   return (
     <div className="panel">
       <div className="panel-header">
-        <h2>🔍 Semantic Search</h2>
-        <p>Tìm kiếm memory bằng ngôn ngữ tự nhiên</p>
+        <h2>Semantic Search</h2>
+        <p>Tim kiem memory bang ngon ngu tu nhien</p>
       </div>
 
       <div className="form-card">
@@ -58,7 +58,7 @@ export default function SearchPanel() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Tôi đã nghiên cứu gì về AI?"
+            placeholder="Toi da nghien cuu gi ve AI?"
           />
         </div>
 
@@ -97,7 +97,7 @@ export default function SearchPanel() {
         </div>
 
         <button className="btn-primary" onClick={handleSearch} disabled={loading || !query.trim()}>
-          {loading ? "Đang tìm..." : "🔍 Search"}
+          {loading ? "Dang tim..." : "Search"}
         </button>
       </div>
 
@@ -106,7 +106,7 @@ export default function SearchPanel() {
       {results && (
         <>
           <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 12 }}>
-            Tìm thấy <strong style={{ color: "var(--accent)" }}>{results.total}</strong> kết quả
+            Tim thay <strong style={{ color: "var(--accent)" }}>{results.total}</strong> ket qua
             cho "{results.query}"
           </div>
 
@@ -121,10 +121,10 @@ export default function SearchPanel() {
                 </div>
                 <div className="result-text">{r.raw_text}</div>
                 <div className="result-footer">
-                  <span>🆔 {r.id.slice(0, 8)}...</span>
-                  <span>📅 {new Date(r.created_at).toLocaleDateString()}</span>
-                  {r.importance_score != null && <span>⭐ {r.importance_score}</span>}
-                  {r.metadata?.tags && <span>🏷 {r.metadata.tags.join(", ")}</span>}
+                  <span>ID {r.id.slice(0, 8)}...</span>
+                  <span>Date {new Date(r.created_at).toLocaleDateString()}</span>
+                  {r.importance_score != null && <span>Score {r.importance_score}</span>}
+                  {r.metadata?.tags && <span>Tags {r.metadata.tags.join(", ")}</span>}
                 </div>
               </div>
             ))}
@@ -134,8 +134,7 @@ export default function SearchPanel() {
 
       {results && results.total === 0 && (
         <div className="chat-empty" style={{ padding: 40 }}>
-          <div className="empty-icon">🔍</div>
-          <p>Không tìm thấy memory nào phù hợp</p>
+          <p>Khong tim thay memory nao phu hop</p>
         </div>
       )}
     </div>

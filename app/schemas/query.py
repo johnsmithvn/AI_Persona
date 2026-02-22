@@ -1,6 +1,6 @@
 """
 Pydantic schemas for Query (Reasoning) endpoints.
-5-Mode System: RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
+Modes: RECALL, RECALL_LLM_RERANK, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
 """
 
 import uuid
@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field, field_validator
 class ModeEnum(str, Enum):
     """Valid reasoning modes. Mode = permission system."""
     RECALL = "RECALL"
+    RECALL_LLM_RERANK = "RECALL_LLM_RERANK"
     SYNTHESIZE = "SYNTHESIZE"
     REFLECT = "REFLECT"
     CHALLENGE = "CHALLENGE"
@@ -23,7 +24,10 @@ class QueryRequest(BaseModel):
     query: str = Field(..., min_length=1, description="Question or prompt to reason over.")
     mode: ModeEnum = Field(
         default=ModeEnum.RECALL,
-        description="Reasoning mode: RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND",
+        description=(
+            "Reasoning mode: RECALL, RECALL_LLM_RERANK, "
+            "SYNTHESIZE, REFLECT, CHALLENGE, EXPAND"
+        ),
     )
     content_type: Optional[str] = Field(
         default=None,

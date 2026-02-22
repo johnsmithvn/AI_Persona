@@ -2,11 +2,36 @@ import { useState, useRef, useEffect } from "react";
 import { queryReasoning } from "../api/client";
 
 const MODES = [
-  { key: "RECALL", desc: "Tra cứu nguyên văn từ memory. Không suy diễn." },
-  { key: "SYNTHESIZE", desc: "Tổng hợp nhiều memory thành structured summary." },
-  { key: "REFLECT", desc: "Phân tích evolution tư duy, nhận diện pattern." },
-  { key: "CHALLENGE", desc: "Chỉ ra mâu thuẫn, logic yếu, gaps." },
-  { key: "EXPAND", desc: "Mở rộng kiến thức với external knowledge." },
+  {
+    key: "RECALL",
+    label: "RECALL",
+    desc: "Tra cuu nguyen van tu memory. Khong suy dien.",
+  },
+  {
+    key: "RECALL_LLM_RERANK",
+    label: "RECALL+",
+    desc: "LLM loc memory theo ngu canh query, sau do tra nguyen van.",
+  },
+  {
+    key: "SYNTHESIZE",
+    label: "SYNTHESIZE",
+    desc: "Tong hop nhieu memory thanh structured summary.",
+  },
+  {
+    key: "REFLECT",
+    label: "REFLECT",
+    desc: "Phan tich evolution tu duy, nhan dien pattern.",
+  },
+  {
+    key: "CHALLENGE",
+    label: "CHALLENGE",
+    desc: "Chi ra mau thuan, logic yeu, gaps.",
+  },
+  {
+    key: "EXPAND",
+    label: "EXPAND",
+    desc: "Mo rong kien thuc voi external knowledge.",
+  },
 ];
 
 export default function ChatPanel() {
@@ -44,10 +69,7 @@ export default function ChatPanel() {
         },
       ]);
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "error", text: err.message },
-      ]);
+      setMessages((prev) => [...prev, { role: "error", text: err.message }]);
     }
     setLoading(false);
   };
@@ -77,7 +99,7 @@ export default function ChatPanel() {
               className={`mode-btn ${mode === m.key ? "active" : ""}`}
               onClick={() => setMode(m.key)}
             >
-              {m.key}
+              {m.label}
             </button>
           ))}
         </div>
@@ -88,7 +110,7 @@ export default function ChatPanel() {
         {messages.length === 0 && (
           <div className="chat-empty">
             <div className="empty-icon">🧠</div>
-            <p>Chọn mode và bắt đầu trò chuyện với bộ nhớ của bạn</p>
+            <p>Chon mode va bat dau tro chuyen voi bo nho cua ban</p>
           </div>
         )}
 
@@ -111,7 +133,9 @@ export default function ChatPanel() {
           <div className="message assistant">
             <div className="message-bubble">
               <div className="loading-dots">
-                <span /><span /><span />
+                <span />
+                <span />
+                <span />
               </div>
             </div>
           </div>
@@ -125,9 +149,12 @@ export default function ChatPanel() {
           <textarea
             ref={textareaRef}
             value={input}
-            onChange={(e) => { setInput(e.target.value); autoResize(e); }}
+            onChange={(e) => {
+              setInput(e.target.value);
+              autoResize(e);
+            }}
             onKeyDown={handleKeyDown}
-            placeholder="Hỏi về memory của bạn... (Enter để gửi, Shift+Enter xuống dòng)"
+            placeholder="Hoi ve memory cua ban... (Enter de gui, Shift+Enter xuong dong)"
             rows={1}
           />
           <button

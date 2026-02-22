@@ -3,7 +3,7 @@ PromptBuilder — assembles the 4-part prompt structure.
 
 4 Parts (DO NOT MIX):
   1. System Prompt    — personality (from YAML)
-  2. Mode Instruction — RECALL / SYNTHESIZE / REFLECT / CHALLENGE / EXPAND behavior
+  2. Mode Instruction — RECALL / RECALL_LLM_RERANK / SYNTHESIZE / REFLECT / CHALLENGE / EXPAND behavior
   3. Memory Context   — retrieved records with [Memory N] labels for citation
   4. User Query       — the actual question
 

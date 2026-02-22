@@ -2,7 +2,7 @@
 ModeController — selects mode instruction and policy for a given mode string.
 Single-responsibility: knows about modes, nothing else.
 
-5-Mode System: RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
+Modes: RECALL, RECALL_LLM_RERANK, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
 """
 
 from app.core.prompts import MODE_INSTRUCTIONS, MODE_POLICIES, ModePolicy

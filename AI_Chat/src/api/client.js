@@ -1,14 +1,14 @@
 /**
- * API Client — Centralized fetch wrapper for AI Person backend.
+ * API Client - Centralized fetch wrapper for AI Person backend.
  * Base URL: http://localhost:8000
  *
  * Endpoints:
- *   POST /api/v1/memory      — Save memory
- *   GET  /api/v1/memory/:id  — Get memory
- *   PATCH /api/v1/memory/:id/archive — Archive memory
- *   POST /api/v1/search      — Semantic search
- *   POST /api/v1/query       — Reasoning (5-mode)
- *   GET  /health             — Health check
+ *   POST /api/v1/memory      - Save memory
+ *   GET  /api/v1/memory/:id  - Get memory
+ *   PATCH /api/v1/memory/:id/archive - Archive memory
+ *   POST /api/v1/search      - Semantic search
+ *   POST /api/v1/query       - Reasoning (6-mode)
+ *   GET  /health             - Health check
  */
 
 const BASE_URL = "http://localhost:8000";
@@ -30,7 +30,7 @@ async function request(method, path, body = null) {
   return data;
 }
 
-// ─── Memory ──────────────────────────────────────────────────────────────────
+// Memory
 
 export async function saveMemory({ raw_text, content_type, importance_score, metadata }) {
   return request("POST", "/api/v1/memory", {
@@ -52,7 +52,7 @@ export async function archiveMemory(id, { is_archived = true, exclude_from_retri
   });
 }
 
-// ─── Search ──────────────────────────────────────────────────────────────────
+// Search
 
 export async function searchMemories({ query, content_type, threshold, limit, metadata_filter }) {
   const body = { query };
@@ -63,7 +63,7 @@ export async function searchMemories({ query, content_type, threshold, limit, me
   return request("POST", "/api/v1/search", body);
 }
 
-// ─── Reasoning ───────────────────────────────────────────────────────────────
+// Reasoning
 
 export async function queryReasoning({ query, mode = "RECALL", content_type, threshold }) {
   const body = { query, mode };
@@ -72,7 +72,7 @@ export async function queryReasoning({ query, mode = "RECALL", content_type, thr
   return request("POST", "/api/v1/query", body);
 }
 
-// ─── Health ──────────────────────────────────────────────────────────────────
+// Health
 
 export async function healthCheck() {
   return request("GET", "/health");

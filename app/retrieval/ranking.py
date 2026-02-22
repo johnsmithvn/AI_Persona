@@ -27,6 +27,11 @@ _MODE_WEIGHTS: dict[str, dict[str, float]] = {
         "recency": 0.10,
         "importance": 0.20,
     },
+    "RECALL_LLM_RERANK": {
+        "semantic": 0.70,
+        "recency": 0.10,
+        "importance": 0.20,
+    },
     "SYNTHESIZE": {
         "semantic": 0.60,
         "recency": 0.05,
@@ -57,7 +62,7 @@ _NEUTRAL_WEIGHTS = {
     "importance": settings.ranking_weight_importance,
 }
 
-_LEXICAL_MODES = {"RECALL", "CHALLENGE"}
+_LEXICAL_MODES = {"RECALL", "RECALL_LLM_RERANK", "CHALLENGE"}
 _TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 _STOPWORDS = {
     "toi", "tao", "ban", "anh", "chi", "em", "se", "da", "dang", "duoc",

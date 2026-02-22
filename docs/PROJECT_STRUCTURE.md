@@ -69,11 +69,12 @@ Toàn bộ quyết định kỹ thuật phải tuân theo 9 nguyên tắc sau. N
 - **External chỉ bật khi:** `mode == "EXPAND"` — mode duy nhất cho phép
 - **`external_knowledge_used` phải log** trong `reasoning_logs` — bắt buộc
 
-#### Mode = Permission System (5-Mode)
+#### Mode = Permission System (6-Mode)
 
 | Mode | Mục Đích | Memory | External | Suy Diễn |
 |---|---|---|---|---|
 | RECALL | Trả nguyên văn | ✅ | ❌ | ❌ |
+| RECALL_LLM_RERANK | LLM chọn memory phù hợp rồi trả nguyên văn | ✅ | ❌ | ❌ |
 | SYNTHESIZE | Tổng hợp kiến thức đã ghi | ✅ | ❌ | ✅ (tổng hợp) |
 | REFLECT | Phân tích evolution tư duy | ✅ | ❌ | ✅ (evolution) |
 | CHALLENGE | Phản biện dựa trên memory | ✅ | ❌ | ✅ (phản biện) |
@@ -118,7 +119,7 @@ Mode không tạo ra AI khác nhau. Mode là **cấu hình quyền hạn** cho c
 │  • Insert DB          │    │               │                  │
 │                       │    │  ┌────────────▼───────────────┐  │
 │                       │    │  │  Mode Controller           │  │
-│                       │    │  │  (5-Mode Permission)       │  │
+│                       │    │  │  (6-Mode Permission)       │  │
 │                       │    │  └────────────┬───────────────┘  │
 │                       │    │               │                  │
 │                       │    │  ┌────────────▼───────────────┐  │
@@ -279,13 +280,14 @@ Lý do chọn precision-first:
 
 ---
 
-## 5. Mode System (5-Mode)
+## 5. Mode System (6-Mode)
 
 ### 5.1. Danh Sách Mode
 
 | Mode | Mục Đích | Hành Vi | V1 |
 |---|---|---|---|
 | **RECALL** | Truy xuất nguyên văn | Trả đúng memory liên quan, không suy diễn | ✅ |
+| **RECALL_LLM_RERANK** | Truy xuất có ngữ cảnh | LLM re-rank candidate memory theo query, trả memory gốc deterministic | ✅ |
 | **SYNTHESIZE** | Tổng hợp kiến thức | Gom nhiều memory → structured summary | ✅ |
 | **REFLECT** | Phân tích evolution tư duy | Nhận diện pattern thay đổi theo thời gian | ✅ |
 | **CHALLENGE** | Phản biện người dùng | Tìm mâu thuẫn, chỉ ra logic yếu | ✅ |
@@ -305,7 +307,7 @@ Lý do chọn precision-first:
 
 Reasoning layer phải phân biệt rõ: **memory-based reasoning** vs **external knowledge reasoning**.
 
-### Rule V1.1 (5-Mode — Single Source of Truth)
+### Rule V1.1 (6-Mode — Single Source of Truth)
 
 External knowledge chỉ được phép trong **EXPAND mode**:
 
@@ -314,7 +316,7 @@ External knowledge chỉ được phép trong **EXPAND mode**:
 if mode == "EXPAND":
     external_knowledge_used = True
 else:
-    external_knowledge_used = False  # RECALL, SYNTHESIZE, REFLECT, CHALLENGE luôn bị khóa
+    external_knowledge_used = False  # RECALL, RECALL_LLM_RERANK, SYNTHESIZE, REFLECT, CHALLENGE luôn bị khóa
 ```
 
 Clean. Không conditional. Mode = permission.

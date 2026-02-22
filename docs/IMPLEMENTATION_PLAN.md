@@ -219,7 +219,7 @@ Cần verify:
 |---|---|---|---|
 | 4.1 | Query schemas | `schemas/query.py` | P0 |
 | 4.2 | Personality YAML | `personalities/default.yaml` | P0 |
-| 4.3 | Mode Controller | `reasoning/mode_controller.py` — 5 modes | P0 |
+| 4.3 | Mode Controller | `reasoning/mode_controller.py` — 6 modes | P0 |
 | 4.4 | Prompt Builder | `reasoning/prompt_builder.py` — 4 phần | P0 |
 | 4.5 | LLM Adapter (OpenAI) | `llm/adapter.py`, `llm/openai_adapter.py` | P0 |
 | 4.6 | Reasoning Service | `reasoning/service.py` — orchestrator | P0 |
@@ -337,7 +337,7 @@ Cần verify:
 | Time filter | Query theo khoảng thời gian |
 | Content type filter | Query theo loại nội dung |
 | Metadata filter | Query theo JSONB metadata |
-| 5 modes | RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND |
+| 6 modes | RECALL, RECALL_LLM_RERANK, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND |
 | Ranking formula | Semantic + recency + importance |
 | Token budget | Giới hạn context gửi LLM |
 | Async embedding | Worker xử lý offline |

@@ -91,7 +91,7 @@ ai-person/
 │   ├── src/
 │   │   ├── api/client.js             # API client (6 endpoints)
 │   │   ├── components/
-│   │   │   ├── ChatPanel.jsx         # 5-mode reasoning chat
+│   │   │   ├── ChatPanel.jsx         # 6-mode reasoning chat
 │   │   │   ├── MemoryPanel.jsx       # Add + lookup memory
 │   │   │   ├── SearchPanel.jsx       # Semantic search + filters
 │   │   │   └── Sidebar.jsx           # Navigation + status
@@ -408,8 +408,9 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 # compute_final_score(similarity, created_at, importance, mode=None)
 #
 # /search: mode=None -> NEUTRAL profile (0.60 / 0.15 / 0.25)
-# /query: mode in 5-mode system -> mode-aware weights:
+# /query: mode in reasoning mode system -> mode-aware weights:
 # - RECALL     → semantic 0.70, recency 0.10, importance 0.20
+# - RECALL_LLM_RERANK → semantic 0.70, recency 0.10, importance 0.20
 # - SYNTHESIZE → semantic 0.60, recency 0.05, importance 0.35  (giảm recency, tăng importance)
 # - REFLECT    → semantic 0.40, recency 0.30, importance 0.30  (tăng recency để thấy evolution)
 # - CHALLENGE  → semantic 0.50, recency 0.10, importance 0.40  (giảm recency, focus logic)
@@ -473,7 +474,7 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 #     CHALLENGE  → phản biện, cite memory_id, không external
 #     EXPAND     → mở rộng, cite memory_id, external bật
 #
-# Modes: RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
+# Modes: RECALL, RECALL_LLM_RERANK, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
 #
 # VALID_MODES = frozenset(MODE_INSTRUCTIONS.keys())
 # Raises InvalidModeError (422) on bad mode input
@@ -546,10 +547,10 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 ```python
 # Constants & Templates:
 # - MODE_INSTRUCTIONS: dict[mode → instruction_text]
-#     Keys: RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
+#     Keys: RECALL, RECALL_LLM_RERANK, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
 # - MODE_POLICIES: dict[mode → ModePolicy]
 #     ModePolicy(can_use_external_knowledge, must_cite_memory_id, can_speculate, description)
-#     Keys: RECALL, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
+#     Keys: RECALL, RECALL_LLM_RERANK, SYNTHESIZE, REFLECT, CHALLENGE, EXPAND
 #     EXPAND.can_use_external_knowledge = True (duy nhất)
 #     Tất cả modes khác: can_use_external_knowledge = False
 ```

@@ -37,6 +37,7 @@ settings = get_settings()
 
 _MODE_SEMANTIC_MIN: dict[str, float] = {
     "RECALL": 0.65,
+    "RECALL_LLM_RERANK": 0.60,
     "SYNTHESIZE": 0.60,
     "REFLECT": 0.55,
     "CHALLENGE": 0.60,
@@ -45,6 +46,7 @@ _MODE_SEMANTIC_MIN: dict[str, float] = {
 
 _MODE_RESULT_LIMITS: dict[str, int] = {
     "RECALL": 5,
+    "RECALL_LLM_RERANK": 12,
     "SYNTHESIZE": 8,
     "REFLECT": 8,
     "CHALLENGE": 4,
@@ -52,7 +54,7 @@ _MODE_RESULT_LIMITS: dict[str, int] = {
 }
 
 _DIVERSITY_MIN_SIMILARITY = 0.70
-_COOLDOWN_MODES = {"RECALL", "CHALLENGE"}
+_COOLDOWN_MODES = {"RECALL", "RECALL_LLM_RERANK", "CHALLENGE"}
 
 
 @dataclass
