@@ -255,9 +255,9 @@ Lý do tách:
 |---|---|
 | Candidate pool SQL | 200 |
 | Absolute similarity floor | >= 0.55 |
-| Mode similarity floor | RECALL 0.65, SYNTHESIZE 0.60, REFLECT 0.55, CHALLENGE 0.60, EXPAND 0.52 |
+| Mode similarity floor | RECALL 0.65, RECALL_LLM_RERANK 0.60, SYNTHESIZE 0.60, REFLECT 0.55, CHALLENGE 0.60, EXPAND 0.52 |
 | Score-gap filter | top_final_score - final_score <= 0.15 |
-| Final return (hard cap) | RECALL 5, SYNTHESIZE 8, REFLECT 8, CHALLENGE 4, EXPAND 10 |
+| Final return (hard cap) | RECALL 5, RECALL_LLM_RERANK 12, SYNTHESIZE 8, REFLECT 8, CHALLENGE 4, EXPAND 10 |
 | Token trimming | linh hoạt (hybrid context) |
 
 Lý do chọn precision-first:
@@ -356,7 +356,8 @@ response = llm_adapter.generate(prompt)
 
 | Mode | External Knowledge | Cite Memory | Speculate |
 |---|---|---|---|
-| RECALL | ❌ Không bao giờ | Không bắt buộc | ❌ Không |
+| RECALL | ❌ Không bao giờ | ✅ Bắt buộc | ❌ Không |
+| RECALL_LLM_RERANK | ❌ Không bao giờ | Không bắt buộc | ❌ Không |
 | SYNTHESIZE | ❌ Không bao giờ | ✅ Bắt buộc | ✅ Có thể (tổng hợp) |
 | REFLECT | ❌ Không bao giờ | ✅ Bắt buộc | ✅ Có thể (evolution) |
 | CHALLENGE | ❌ Không bao giờ | ✅ Bắt buộc | ❌ Không |
@@ -370,7 +371,7 @@ Nếu không có policy guard → mode chỉ là prompt decoration.
 ┌─────────────────────┐
 │ 1. System Prompt     │  ← Personality (YAML)
 ├─────────────────────┤
-│ 2. Mode Instruction  │  ← RECALL / REFLECT / CHALLENGE
+│ 2. Mode Instruction  │  ← RECALL / RECALL_LLM_RERANK / SYNTHESIZE / REFLECT / CHALLENGE / EXPAND
 ├─────────────────────┤
 │ 3. Memory Context    │  ← Retrieved records
 ├─────────────────────┤
@@ -437,7 +438,9 @@ ReasoningService.process_query()
   ├── ModeController → chọn instruction
   ├── PromptBuilder → xây prompt (4 phần)
   ├── Token Guard → kiểm soát context size
-  ├── LLMAdapter.generate() → gọi model
+  ├── RECALL → trả deterministic [Memory N], skip LLM
+  ├── RECALL_LLM_RERANK → LLM chọn index memory, sau đó trả deterministic memory gốc
+  ├── Các mode còn lại → LLMAdapter.generate() → gọi model
   └── Return:
         ├── response (câu trả lời)
         ├── memory_used (list memory_ids)
@@ -533,7 +536,7 @@ Mà là **trộn vai trò**.
 |---|---|---|---|
 | 1 | **Memory Noise Explosion** — Sau 6 tháng, 10k records, embedding nhiễu | Cao | Re-embed định kỳ, tag clustering, importance_score |
 | 2 | **Mode Drift** — LLM quên mode sau 30 lượt chat | Cao | Inject mode mỗi request, không rely conversation memory |
-| 3 | **Memory Bias Lock-in** — AI chỉ reasoning từ quá khứ, củng cố sai lầm | Trung bình | CHALLENGE mode đối chiếu external knowledge |
+| 3 | **Memory Bias Lock-in** — AI chỉ reasoning từ quá khứ, củng cố sai lầm | Trung bình | CHALLENGE mode để phản biện nội bộ + EXPAND mode khi cần đối chiếu external |
 | 4 | **Token Cost Explosion** — 10 records × 500 tokens mỗi query | Trung bình | Summarization layer, memory compression, token guard |
 | 5 | **Embedding dimension thay đổi** | Thấp | Không overwrite cũ, thêm column mới |
 | 6 | **Metadata phình to** | Thấp | Giới hạn JSON size, không dump raw document |

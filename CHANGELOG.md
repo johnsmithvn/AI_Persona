@@ -15,7 +15,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - `cli/registry.py` — content_type, tag, type menus (mirrors MEMORY_CONTRACT.md)
 - `cli/person_helpers.py` — person name normalization + suggestion
 - `MemoryRepository.get_distinct_person_names()` — JSONB query for CLI person flow
-- `AI_Chat/` — React chat UI (Vite) with 5-mode reasoning, memory management, semantic search
+- `AI_Chat/` — React chat UI (Vite) with 6-mode reasoning, memory management, semantic search
 - `AI_Chat/src/api/client.js` — fetch wrapper for all 6 API endpoints
 - `.\ ai chat` command in `ai.ps1` — launches React dev server
 - `validate_citations()` in `ReasoningService` — enforces `[Memory N]` citation format, detects fabricated references
@@ -45,35 +45,38 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - `DATA_DESIGN.md` section 11.8: Engagement Tracking (V2 Planned)
 
 ### Changed
-- **BREAKING (docs):** 5-Mode System replaces 3-Mode (RECALL/SYNTHESIZE/REFLECT/CHALLENGE/EXPAND)
-- `idea.md` — full rewrite with 5-mode ideal, architecture flow, retrieval intelligence
-- `PROJECT_STRUCTURE.md` — sections 2.1, 5, Epistemic Boundary updated to 5-mode
-- `API_DOCS.md` — modes table, cURL examples updated to 5-mode
-- `IMPLEMENTATION_PLAN.md` — Phase 4 checklist + test scenarios + deliverables updated to 5-mode
-- `CODEBASE_STRUCTURE.md` — ModeController (5-mode), ranking.py (mode-aware weights), service.py (Source Decision Layer)
+- **BREAKING (docs):** 6-Mode System replaces 3-Mode (RECALL/RECALL_LLM_RERANK/SYNTHESIZE/REFLECT/CHALLENGE/EXPAND)
+- `idea.md` — full rewrite with 6-mode ideal, architecture flow, retrieval intelligence
+- `PROJECT_STRUCTURE.md` — sections 2.1, 5, Epistemic Boundary updated to 6-mode
+- `API_DOCS.md` — modes table, cURL examples updated to 6-mode
+- `IMPLEMENTATION_PLAN.md` — Phase 4 checklist + test scenarios + deliverables updated to 6-mode
+- `CODEBASE_STRUCTURE.md` — ModeController (6-mode), ranking.py (mode-aware weights), service.py (Source Decision Layer)
 - `DATA_DESIGN.md` — section 7.2.1: Mode-Aware Ranking Weights table + app-layer architecture note
 - `/api/v1/search` ranking profile standardized to **NEUTRAL** (`0.60/0.15/0.25`)
-- `/api/v1/query` keeps mode-aware ranking profiles (5 modes)
+- `/api/v1/query` keeps mode-aware ranking profiles (6 modes)
 - `SearchResponse` now includes `ranking_profile` for ranking-debug clarity
 - Removed stale `source_type` schema references from structure docs (`CODEBASE_STRUCTURE.md`, `PROJECT_STRUCTURE.md`)
 - Epistemic boundary: token-threshold (800) retired → mode-based (EXPAND = external ON)
 - Retired modes: ANALYZE, TEMPORAL_COMPARE → merged into SYNTHESIZE, REFLECT
 - /api/v1/query retrieval ranking now applies a small exposure-aware diversity bonus (+0.02 * 1/(1+retrieval_count), capped at 0.02) to reduce repetitive top memories.
 - Exposure signal source is reasoning_logs.memory_ids (no new DB column in V1.1).
+- `AI_Chat/src/components/ChatPanel.jsx` — mode selector now includes `RECALL_LLM_RERANK` (UI label `RECALL+`).
+- `AI_Chat/src/components/SearchPanel.jsx` — default search threshold aligned to backend default `0.45`.
+- `API_DOCS.md`, `PROJECT_STRUCTURE.md`, `CODEBASE_STRUCTURE.md`, `IMPLEMENTATION_PLAN.md` — synchronized docs for 6-mode behavior and deterministic recall branch.
 
 ### Documented (Code Gaps)
 - `API_DOCS.md` — `metadata_filter` marked NOT_IMPLEMENTED, `content_type` search validation gap noted
 - `API_DOCS.md` — `INVALID_MODE` error code added (422)
 
 ### Code Refactored (Reasoning Modes)
-- `prompts.py` — 5-mode instructions + policies, REFLECT.external=False, EXPAND.external=True
+- `prompts.py` — 6-mode instructions + policies, REFLECT.external=False, EXPAND.external=True
 - `prompts.py` — CHALLENGE mode now prioritizes query-matching memories, enforces Vietnamese output, and uses a 3-part challenge structure.
 - `mode_controller.py` — VALID_MODES from MODE_INSTRUCTIONS keys, raises InvalidModeError
 - `schemas/query.py` — ModeEnum extended with `RECALL_LLM_RERANK` for LLM-assisted memory selection
 - `service.py` — EXPAND-only external, removed token-threshold + MIN_CONTEXT_TOKENS
-- `ranking.py` — 5-mode weights per DATA_DESIGN 7.2.1
+- `ranking.py` — 6-mode weights per DATA_DESIGN 7.2.1
 - `exceptions/handlers.py` — InvalidModeError (422)
-- `prompt_builder.py` — docstring updated to 5 modes
+- `prompt_builder.py` — docstring updated to 6 modes
 - `CODEBASE_STRUCTURE.md` — all CAUTION blocks removed, specs updated
 - `app/retrieval/ranking.py` — neutral profile fallback (`mode=None`) + `get_ranking_profile()`
 - `app/retrieval/search.py` — `SearchFilters.mode` optional; logs resolved ranking profile
@@ -202,3 +205,4 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 [0.1.2]: https://github.com/username/ai-person/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/username/ai-person/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/username/ai-person/releases/tag/v0.1.0
+

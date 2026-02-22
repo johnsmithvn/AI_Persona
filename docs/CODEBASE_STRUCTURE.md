@@ -91,9 +91,9 @@ ai-person/
 │   ├── src/
 │   │   ├── api/client.js             # API client (6 endpoints)
 │   │   ├── components/
-│   │   │   ├── ChatPanel.jsx         # 6-mode reasoning chat
+│   │   │   ├── ChatPanel.jsx         # 6-mode reasoning chat (UI label: RECALL+ = RECALL_LLM_RERANK)
 │   │   │   ├── MemoryPanel.jsx       # Add + lookup memory
-│   │   │   ├── SearchPanel.jsx       # Semantic search + filters
+│   │   │   ├── SearchPanel.jsx       # Semantic search + filters (default threshold: 0.45)
 │   │   │   └── Sidebar.jsx           # Navigation + status
 │   │   ├── App.jsx                   # Layout + health polling
 │   │   ├── App.css                   # Component styles
@@ -394,7 +394,7 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 #     2. Execute SQL Top-K (cosine + filter + candidate pool=200, no DB threshold)
 #     3. Apply semantic floors (absolute + mode + request floor)
 #     4. Apply ranking + score-gap + mode hard cap
-#     4.5 RECALL/CHALLENGE: same-query cooldown reorder (fresh first)
+#     4.5 RECALL/RECALL_LLM_RERANK/CHALLENGE: same-query cooldown reorder (fresh first)
 #     5. Return ranked list
 #
 # RetrievalService không được gọi OpenAI trực tiếp.

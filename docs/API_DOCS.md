@@ -198,7 +198,7 @@ Mode-aware ranking chỉ áp dụng trong `/api/v1/query` (vì endpoint này có
 ### 3.1 POST `/api/v1/query` — Reasoning Pipeline
 
 Full reasoning pipeline:
-`Retrieval → TokenGuard → Mode → Prompt → LLM → Response`
+`Retrieval → TokenGuard → Mode → (Deterministic Recall OR Prompt → LLM) → Response`
 
 **Request Body:**
 
@@ -228,6 +228,7 @@ Full reasoning pipeline:
 > Với `RECALL`, nếu sau gate không còn memory phù hợp, API trả trực tiếp: `"Không có memory liên quan đến câu hỏi này."`
 > Với `RECALL`, nếu có memory phù hợp, API trả deterministic danh sách `[Memory N]` (không gọi LLM để diễn đạt lại).
 > Với `RECALL_LLM_RERANK`, hệ thống gọi LLM để chọn memory index phù hợp nhất từ candidate pool, sau đó vẫn trả deterministic memory gốc (LLM không được rewrite nội dung memory).
+> **AI_Chat mapping:** nút `RECALL+` trong UI tương ứng mode API `RECALL_LLM_RERANK`.
 
 #### Modes
 

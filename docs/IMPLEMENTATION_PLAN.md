@@ -266,6 +266,9 @@ Cần verify:
 1. RECALL: "Tao từng viết gì về LoRA?"
    → Expect: trả nguyên văn memory liên quan
 
+1b. RECALL_LLM_RERANK: "Những memory nào thật sự sát với câu này?"
+   → Expect: LLM chỉ chọn memory index liên quan nhất, output cuối vẫn là memory gốc deterministic
+
 2. SYNTHESIZE: "Tổng hợp những gì tao biết về fine-tuning"
    → Expect: gom nhiều memory → structured summary
 
@@ -459,6 +462,7 @@ DEBUG=false
 
 ### Milestone 4: "Brain Works" (End of Phase 4)
 - [ ] POST `/api/v1/query` với mode RECALL trả nguyên văn
+- [ ] POST `/api/v1/query` với mode RECALL_LLM_RERANK chọn đúng memory và trả deterministic output
 - [ ] Mode REFLECT tổng hợp nhiều memory
 - [ ] Mode CHALLENGE chỉ ra mâu thuẫn
 - [ ] `memory_used` trong response chính xác
