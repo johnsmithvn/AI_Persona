@@ -245,21 +245,24 @@ Lý do tách:
 - Content type filter
 - Metadata filter (JSONB query)
 - Ranking formula (không chỉ similarity)
-- Similarity threshold (không trả memory kém liên quan)
+- Multi-layer relevance gate (absolute floor + mode floor + score-gap + hard cap)
+- Query replay cooldown để giảm lặp khi user gửi lại cùng câu hỏi
 
-**Chiến lược retrieval: Recall cao (bao phủ rộng)**
+**Chiến lược retrieval: Precision-first (production hardened)**
 
 | Tham số | Giá trị |
 |---|---|
-| Cosine distance threshold | < 0.7 |
-| Candidate pool | 400–600 |
-| Final return | 20–30 records |
+| Candidate pool SQL | 200 |
+| Absolute similarity floor | >= 0.55 |
+| Mode similarity floor | RECALL 0.65, SYNTHESIZE 0.60, REFLECT 0.55, CHALLENGE 0.60, EXPAND 0.52 |
+| Score-gap filter | top_final_score - final_score <= 0.15 |
+| Final return (hard cap) | RECALL 5, SYNTHESIZE 8, REFLECT 8, CHALLENGE 4, EXPAND 10 |
 | Token trimming | linh hoạt (hybrid context) |
 
-Lý do chọn recall cao:
-- Phù hợp cho REFLECT, CHALLENGE, TEMPORAL_COMPARE
-- Không bỏ sót insight quan trọng
-- Cần diversity guard + token guard để tránh noise
+Lý do chọn precision-first:
+- Ưu tiên `No-memory > Wrong-memory`
+- Giảm memory "hơi hơi liên quan" tràn vào reasoning
+- Dễ debug ranking vì mọi gate nằm ở app layer
 
 ### 4.3. Tầng 3 — Reasoning Layer
 
@@ -412,8 +415,9 @@ API Layer (POST /search)
   ▼
 RetrievalService.search()
   ├── Embed query (active embedding_model)
-  ├── Execute SQL (cosine + filter + embedding_model match)
-  ├── Apply neutral ranking profile (0.60 semantic / 0.15 recency / 0.25 importance)
+  ├── Execute SQL Top-K (cosine + filter + embedding_model match, no DB threshold)
+  ├── Apply app-layer floors (absolute + mode + request threshold)
+  ├── Apply ranking profile + score-gap + mode hard cap
   └── Return ranked memory list
 ```
 

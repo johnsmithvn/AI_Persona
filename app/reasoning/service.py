@@ -101,6 +101,20 @@ class ReasoningService:
         #    Clean. No conditional threshold. Mode = permission.
         external_knowledge_used = policy.can_use_external_knowledge
 
+        # Strict RECALL behavior: deterministic memory output, no LLM generation.
+        if mode == "RECALL":
+            logger.info(
+                "recall_deterministic_response",
+                extra={"mode": mode, "memory_count": len(budgeted)},
+            )
+            return await self._return_recall_response(
+                request=request,
+                mode=mode,
+                memories=budgeted,
+                external_knowledge_used=external_knowledge_used,
+                start_time=start_time,
+            )
+
         # 5. Load personality and build prompt
         personality = load_personality()
         system_prompt = build_system_prompt(personality)
@@ -117,15 +131,6 @@ class ReasoningService:
             full_prompt,
             LLMConfig(temperature=0.3, max_tokens=1200),
         )
-
-        # Some local models may ignore citation instructions in RECALL mode.
-        # Build deterministic verbatim output with citations instead of failing.
-        if mode == "RECALL" and budgeted and not _CITATION_PATTERN.search(llm_response.content):
-            logger.warning(
-                "recall_citation_fallback_applied",
-                extra={"mode": mode, "memory_count": len(budgeted)},
-            )
-            llm_response.content = self._build_recall_fallback(budgeted)
 
         # 7. Validate citations — enforce must_cite_memory_id policy
         self._validate_citations(
@@ -186,10 +191,58 @@ class ReasoningService:
     @staticmethod
     def _build_recall_fallback(memories: list[BudgetedMemory]) -> str:
         """Build deterministic RECALL response with explicit [Memory N] citations."""
-        lines: list[str] = ["Dưới đây là các memory liên quan:"]
+        lines = ["## 📚 Các memory liên quan\n"]
+
         for idx, memory in enumerate(memories, start=1):
-            lines.append(f"- [Memory {idx}] {memory.raw_text.strip()}")
+            lines.append(f"### 🧠 Memory {idx}")
+            lines.append(f"> {memory.raw_text.strip()}")
+            lines.append("")
         return "\n".join(lines)
+
+    async def _return_recall_response(
+        self,
+        request: QueryRequest,
+        mode: str,
+        memories: list[BudgetedMemory],
+        external_knowledge_used: bool,
+        start_time: float,
+    ) -> QueryResponse:
+        """Persist and return deterministic RECALL response."""
+        response_text = self._build_recall_fallback(memories)
+        latency_ms = int((time.monotonic() - start_time) * 1000)
+        memory_ids = [uuid.UUID(m.id) for m in memories]
+
+        log = ReasoningLog(
+            user_query=request.query,
+            mode=mode,
+            memory_ids=memory_ids,
+            prompt_hash=None,
+            debug_prompt=None,
+            external_knowledge_used=external_knowledge_used,
+            confidence_score=0.5,
+            response=response_text,
+            token_usage={
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total": 0,
+            },
+            latency_ms=latency_ms,
+        )
+        self._session.add(log)
+        await self._session.commit()
+
+        return QueryResponse(
+            response=response_text,
+            mode=mode,
+            memory_used=memory_ids,
+            token_usage={
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total": 0,
+            },
+            external_knowledge_used=external_knowledge_used,
+            latency_ms=latency_ms,
+        )
 
     async def _return_no_memory_response(
         self,

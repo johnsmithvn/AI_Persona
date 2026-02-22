@@ -30,10 +30,13 @@ class QueryRequest(BaseModel):
         description="Optional filter: restrict retrieval to this content type.",
     )
     threshold: float = Field(
-        default=0.55,
+        default=0.45,
         ge=0.0,
         le=1.0,
-        description="Cosine distance threshold for retrieval. Lower = stricter matching.",
+        description=(
+            "Cosine distance threshold (app-layer floor). "
+            "Converted to similarity floor via similarity = 1 - distance. Lower = stricter."
+        ),
     )
 
     @field_validator("content_type")

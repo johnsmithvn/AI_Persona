@@ -39,6 +39,12 @@
   - [x] `/api/v1/query` giữ mode-aware ranking (5 mode)
   - [x] `SearchResponse` thêm `ranking_profile` để debug
   - [x] Đồng bộ `API_DOCS`, `DATA_DESIGN`, `CODEBASE_STRUCTURE`, `PROJECT_STRUCTURE`
+- [x] **✅ Retrieval production hardening (precision-first):**
+  - [x] Bỏ DB distance-threshold filter, SQL chỉ lấy Top-K candidate pool = 200
+  - [x] App-layer semantic floors: absolute + mode + request floor
+  - [x] Score-gap filter + mode hard cap trước reasoning
+  - [x] Diversity bonus clamp (`max 0.02`) và chỉ áp dụng khi similarity cao
+  - [x] Đồng bộ docs + changelog + implementation plan + structure docs
 - [x] **ENUM → VARCHAR migration** (003) — fixes asyncpg type mismatch
 
 - [ ] **Setup `.env`** — copy `.env.example` → `.env`, điền `OPENAI_API_KEY`

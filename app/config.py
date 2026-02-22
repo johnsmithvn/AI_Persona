@@ -42,15 +42,19 @@ class Settings(BaseSettings):
     embedding_worker_batch_size: int = 10
 
     # ─── Retrieval ────────────────────────────────────────────────────────────
-    retrieval_candidate_pool: int = 500
+    retrieval_candidate_pool: int = 200
     retrieval_final_limit: int = 30
-    retrieval_distance_threshold: float = 0.7
+    retrieval_absolute_similarity_floor: float = 0.55
+    retrieval_score_gap_threshold: float = 0.15
+    retrieval_query_cooldown_logs: int = 2
 
     # ─── Ranking weights ──────────────────────────────────────────────────────
     ranking_weight_semantic: float = 0.60
     ranking_weight_recency: float = 0.15
     ranking_weight_importance: float = 0.25
     ranking_recency_half_life_days: float = 30.0
+    ranking_diversity_weight: float = 0.02
+    ranking_diversity_bonus_cap: float = 0.02
 
     # ─── Diversity guard ──────────────────────────────────────────────────────
     diversity_cosine_threshold: float = 0.95

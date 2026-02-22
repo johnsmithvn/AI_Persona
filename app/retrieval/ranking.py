@@ -10,6 +10,8 @@ No SQL here. Pure Python computation on already-retrieved records.
 """
 
 import math
+import re
+import unicodedata
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -55,6 +57,14 @@ _NEUTRAL_WEIGHTS = {
     "importance": settings.ranking_weight_importance,
 }
 
+_LEXICAL_MODES = {"RECALL", "CHALLENGE"}
+_TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
+_STOPWORDS = {
+    "toi", "tao", "ban", "anh", "chi", "em", "se", "da", "dang", "duoc",
+    "la", "thi", "va", "hoac", "nhung", "cho", "voi", "tren", "duoi", "nay",
+    "kia", "day", "do", "ma", "tu", "den", "roi", "thoi",
+}
+
 
 def get_ranking_profile(mode: Optional[str]) -> str:
     """
@@ -76,6 +86,20 @@ def _get_weights(mode: Optional[str]) -> dict[str, float]:
     if profile == _NEUTRAL_PROFILE:
         return _NEUTRAL_WEIGHTS
     return _MODE_WEIGHTS[profile]
+
+
+def _normalize_for_match(text: str) -> str:
+    """Lowercase + strip accents for lightweight lexical matching."""
+    lowered = text.lower()
+    normalized = unicodedata.normalize("NFD", lowered)
+    without_marks = "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
+    return without_marks
+
+
+def _extract_query_keywords(query: str) -> list[str]:
+    normalized = _normalize_for_match(query)
+    tokens = _TOKEN_PATTERN.findall(normalized)
+    return [t for t in tokens if len(t) >= 4 and t not in _STOPWORDS]
 
 
 def compute_final_score(
@@ -115,6 +139,74 @@ def compute_final_score(
         + weights["recency"] * recency_score
         + weights["importance"] * imp
     )
+
+
+def compute_exposure_diversity_bonus(
+    retrieval_count: int,
+    *,
+    weight: Optional[float] = None,
+    max_bonus: Optional[float] = None,
+) -> float:
+    """
+    Compute a small bonus for under-exposed memories.
+
+    Formula:
+      diversity = 1 / (1 + retrieval_count)
+      bonus = weight * diversity
+
+    Notes:
+    - retrieval_count = number of past reasoning sessions that used this memory.
+    - bonus must stay small so semantic relevance still dominates.
+    """
+    w = settings.ranking_diversity_weight if weight is None else weight
+    if w <= 0:
+        return 0.0
+
+    safe_count = max(0, retrieval_count)
+    diversity = 1.0 / (1.0 + float(safe_count))
+    bonus = w * diversity
+
+    cap = settings.ranking_diversity_bonus_cap if max_bonus is None else max_bonus
+    if cap <= 0:
+        return bonus
+    return min(cap, bonus)
+
+
+def compute_query_lexical_bonus(
+    query: str,
+    memory_text: str,
+    mode: Optional[str],
+) -> float:
+    """
+    Boost memories that explicitly mention key query terms.
+
+    Applied only for RECALL/CHALLENGE where users expect direct phrase hits.
+    """
+    if not query or not memory_text:
+        return 0.0
+
+    normalized_mode = (mode or "").upper().strip()
+    if normalized_mode not in _LEXICAL_MODES:
+        return 0.0
+
+    keywords = _extract_query_keywords(query)
+    if not keywords:
+        return 0.0
+
+    normalized_text = _normalize_for_match(memory_text)
+    matched = sum(1 for token in keywords if token in normalized_text)
+    if matched == 0:
+        return 0.0
+
+    ratio = matched / float(len(keywords))
+    bonus = 0.0
+    if matched >= 2:
+        bonus += 0.03
+    if ratio >= 0.5:
+        bonus += 0.03
+    if ratio >= 0.8:
+        bonus += 0.02
+    return min(0.08, bonus)
 
 
 def deduplicate_memories(

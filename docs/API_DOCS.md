@@ -144,7 +144,7 @@ Mode-aware ranking chỉ áp dụng trong `/api/v1/query` (vì endpoint này có
     "start_date": "2025-01-01T00:00:00Z",
     "end_date": null,
     "limit": 20,
-    "threshold": 0.7,
+    "threshold": 0.45,
     "metadata_filter": {"tags": ["ai"]},
     "include_summaries": false
 }
@@ -157,7 +157,7 @@ Mode-aware ranking chỉ áp dụng trong `/api/v1/query` (vì endpoint này có
 | `start_date` | `datetime` | ❌ | `null` | ISO 8601 |
 | `end_date` | `datetime` | ❌ | `null` | ISO 8601 |
 | `limit` | `int` | ❌ | `20` | Range: `1` – `100` |
-| `threshold` | `float` | ❌ | `0.7` | Cosine distance threshold (thấp = giống hơn) |
+| `threshold` | `float` | ❌ | `0.45` | Cosine distance threshold. App layer chuyển sang similarity floor theo `similarity = 1 - threshold` |
 | `metadata_filter` | `object` | ❌ | `null` | JSONB containment filter (`@>`). Ví dụ: `{"tags": ["ai"]}`, `{"extra": {"person_name": "Linh"}}` |
 | `include_summaries` | `bool` | ❌ | `false` | Include `is_summary=true` records (V1: luôn `false`) |
 
@@ -207,7 +207,7 @@ Full reasoning pipeline:
     "query": "Tư duy của tao về AI thay đổi thế nào?",
     "mode": "REFLECT",
     "content_type": null,
-    "threshold": 0.55
+    "threshold": 0.45
 }
 ```
 
@@ -216,10 +216,17 @@ Full reasoning pipeline:
 | `query` | `string` | ✅ | — | Question hoặc prompt |
 | `mode` | `string` | ❌ | `"RECALL"` | Enum: `RECALL`, `SYNTHESIZE`, `REFLECT`, `CHALLENGE`, `EXPAND` |
 | `content_type` | `string` | ❌ | `null` | Restrict retrieval to type |
-| `threshold` | `float` | ❌ | `0.55` | Cosine distance threshold (lower = stricter) |
+| `threshold` | `float` | ❌ | `0.45` | Cosine distance threshold. App layer chuyển sang similarity floor theo `similarity = 1 - threshold` |
 
-> **Relevance Gate (v0.3.x):** Sau retrieval, hệ thống áp dụng thêm gate theo mode (`min_top_similarity`, `relative_drop`, `max_results`) để loại các memory "gần gần".  
+> **Production Retrieval Gate (v0.3.x):** Sau khi lấy Top-K candidates từ SQL, app layer áp 4 lớp:
+> absolute similarity floor (`>= 0.55`), mode-specific floor (RECALL 0.65, SYNTHESIZE 0.60, REFLECT 0.55, CHALLENGE 0.60, EXPAND 0.52),
+> score-gap filter (`top_final_score - final_score <= 0.15`) và mode hard cap (RECALL 5, SYNTHESIZE 8, REFLECT 8, CHALLENGE 4, EXPAND 10).  
+> **Exposure-Aware Diversity (v0.3.x):** /query adds `+0.02 * (1 / (1 + retrieval_count))`, chỉ áp dụng khi `similarity >= 0.70`, bonus cap tối đa `0.02`.
+> `retrieval_count` được suy ra từ `reasoning_logs.memory_ids` (không thêm cột DB mới).
+> **Query Replay Cooldown (v0.3.x):** với `RECALL`/`CHALLENGE`, nếu user lặp lại đúng cùng câu hỏi, memory đã dùng ở vài log gần nhất sẽ bị đẩy xuống sau để tăng cơ hội cho memory khác trong cùng cụm liên quan.
+> **Lexical Anchor (v0.3.x):** ở `RECALL` và `CHALLENGE`, hệ thống cộng thêm lexical bonus nhỏ khi memory chứa keyword trực tiếp từ query.
 > Với `RECALL`, nếu sau gate không còn memory phù hợp, API trả trực tiếp: `"Không có memory liên quan đến câu hỏi này."`
+> Với `RECALL`, nếu có memory phù hợp, API trả deterministic danh sách `[Memory N]` (không gọi LLM để diễn đạt lại).
 
 #### Modes
 

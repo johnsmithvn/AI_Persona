@@ -186,8 +186,11 @@ volumes:
 [x] Filter: content_type
 [x] Filter: time range (start_date, end_date)
 [x] Filter: metadata JSONB
-[x] Distance threshold (< 0.7)
-[x] Candidate pool (500)
+[x] App-layer semantic floors (absolute + mode + request floor)
+[x] Candidate pool (200)
+[x] Score-gap filter (top cluster only)
+[x] Mode hard cap (precision-first retrieval)
+[x] Same-query cooldown reorder (RECALL/CHALLENGE anti-repeat)
 [x] Ranking profile tách bạch: `/search` neutral, `/query` mode-aware
 [x] Diversity guard (cosine > 0.95 → giữ 1)
 [x] TokenGuard.check_budget() cơ bản
@@ -452,7 +455,7 @@ DEBUG=false
 - [ ] POST `/api/v1/search` trả kết quả semantic search
 - [ ] `/search` dùng neutral ranking (0.60/0.15/0.25) cho kết quả hợp lý
 - [ ] Filter theo content_type, time range hoạt động
-- [ ] Threshold loại bỏ memory không liên quan
+- [ ] Relevance floors + score-gap gate loại bỏ memory không liên quan
 
 ### Milestone 4: "Brain Works" (End of Phase 4)
 - [ ] POST `/api/v1/query` với mode RECALL trả nguyên văn

@@ -316,15 +316,14 @@ WITH candidates AS (
     AND exclude_from_retrieval = false
     AND is_archived = false
     AND embedding_model = $5
-    AND is_summary = false           -- ← Mặc định loại bỏ summary. Override bằng $7 = true
+    AND ($7::boolean = true OR is_summary = false)
       -- Optional filters
       AND ($2::content_type IS NULL OR content_type = $2)
       AND ($3::timestamptz IS NULL OR created_at >= $3)
       AND ($4::timestamptz IS NULL OR created_at <= $4)
-      -- Distance threshold (< 0.7 cho recall cao)
-      AND (embedding <=> $1::vector) < $6
-    ORDER BY embedding <=> $1::vector
-    LIMIT 500  -- Candidate pool lớn cho recall cao
+      -- No distance threshold in SQL (app layer controls relevance floors)
+      ORDER BY embedding <=> $1::vector
+    LIMIT 200  -- Candidate pool gọn để giữ latency ổn định
 )
 SELECT
     id,
@@ -340,7 +339,8 @@ ORDER BY similarity DESC;
 
 
 ```
-- $7 = include_summaries (BOOLEAN, default false). V1 chưa tự bật theo mode.
+- SQL chỉ làm candidate retrieval + optional filters.
+- Relevance control nằm ở app layer theo nguyên tắc `No-memory > Wrong-memory`.
 - Recency dùng exponential decay thay vì inverse linear decay.
 - Half-life mặc định = 30 ngày.
 
@@ -362,6 +362,9 @@ SQL chỉ lấy candidate theo `similarity`.
 
 > ⚠️ **Architecture note:** `final_score` KHÔNG hardcode trong SQL.
 > SQL trả candidate + `similarity`; app layer tính recency decay + composite score.
+> `/query` có thêm diversity bonus nhỏ để giảm lặp memory:
+> `bonus = min(0.02, 0.02 * (1 / (1 + retrieval_count)))`,
+> chỉ áp dụng khi `similarity >= 0.70`.
 
 ```python
 # App layer (retrieval/ranking.py)
@@ -378,14 +381,38 @@ MODE_WEIGHTS = {
 ```
 ### 7.3. Giải Thích Các Phần Quan Trọng
 
-#### Early Candidate Limit (500)
-- HNSW lấy top 500 gần nhất trước
-- Sau đó re-rank bằng scoring formula
-- Nếu không tách 2 bước → recency + importance không hiệu quả
+#### Early Candidate Limit (200)
+- HNSW lấy top 200 gần nhất trước (candidate pool cố định).
+- App layer mới quyết định record nào đủ liên quan để đi tiếp.
+- Cách này tránh DB-level threshold quá lỏng và dễ debug hơn.
 
-#### Similarity Threshold (< 0.7)
-- Cosine distance < 0.7 ≈ similarity > 0.3
-- Nếu không có threshold → LLM bị ép dùng memory không liên quan → hallucination
+#### Production Relevance Floors (App Layer)
+- `absolute_similarity_floor = 0.55` (mọi mode đều phải qua).
+- `mode_similarity_floor`:
+  - `RECALL = 0.65`
+  - `SYNTHESIZE = 0.60`
+  - `REFLECT = 0.55`
+  - `CHALLENGE = 0.60`
+  - `EXPAND = 0.52`
+- `requested_similarity_floor = 1 - threshold` (từ request).
+- Floor dùng thực tế: `max(absolute_floor, mode_floor, requested_floor)`.
+- Nếu không còn candidate sau floor → trả rỗng ngay (không ép LLM dùng memory gần gần).
+
+#### Score Gap + Hard Cap
+- Sau khi tính `final_score`, giữ cluster gần top:
+  - `top_final_score - final_score <= 0.15`.
+- Sau đó áp hard cap theo mode:
+  - `RECALL = 5`
+  - `SYNTHESIZE = 8`
+  - `REFLECT = 8`
+  - `CHALLENGE = 4`
+  - `EXPAND = 10`
+- Triết lý: precision trước, giảm context noise.
+
+#### Query Replay Cooldown (RECALL/CHALLENGE)
+- Khi user lặp lại cùng `query` và `mode`, hệ thống lấy memory_ids từ một số log gần nhất.
+- Những memory vừa dùng gần đây không bị loại bỏ, nhưng bị reorder xuống sau các memory "fresh".
+- Cooldown chỉ chạy sau khi đã qua semantic floors + gap filter, nên không làm giảm precision.
 
 #### Recency Decay
 ```sql
@@ -431,7 +458,6 @@ SELECT id, raw_text, content_type,
        1 - (embedding <=> $1::vector) AS similarity
 FROM memory_records
 WHERE embedding IS NOT NULL
-  AND (embedding <=> $1::vector) < $6
 ORDER BY embedding <=> $1::vector
 LIMIT 20;
 ```
@@ -583,8 +609,8 @@ WITH (m = 24, ef_construction = 300);
 **Vấn đề:** Query trả về < 5 records
 
 **Giải pháp (app layer):**
-- Hạ threshold từ 0.7 xuống 0.6
-- Retry search
+- Nới `threshold` theo bước nhỏ (ví dụ 0.45 → 0.50), nhưng vẫn bị chặn bởi `absolute_similarity_floor = 0.55`
+- Không hạ `absolute_similarity_floor` trừ khi đã phân tích distribution thực tế
 - KHÔNG để LLM tự quyết có đủ context không
 
 ### 11.5. Memory Domination

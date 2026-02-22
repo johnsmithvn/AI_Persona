@@ -58,6 +58,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Removed stale `source_type` schema references from structure docs (`CODEBASE_STRUCTURE.md`, `PROJECT_STRUCTURE.md`)
 - Epistemic boundary: token-threshold (800) retired → mode-based (EXPAND = external ON)
 - Retired modes: ANALYZE, TEMPORAL_COMPARE → merged into SYNTHESIZE, REFLECT
+- /api/v1/query retrieval ranking now applies a small exposure-aware diversity bonus (+0.02 * 1/(1+retrieval_count), capped at 0.02) to reduce repetitive top memories.
+- Exposure signal source is reasoning_logs.memory_ids (no new DB column in V1.1).
 
 ### Documented (Code Gaps)
 - `API_DOCS.md` — `metadata_filter` marked NOT_IMPLEMENTED, `content_type` search validation gap noted
@@ -65,6 +67,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Code Refactored (5-Mode)
 - `prompts.py` — 5-mode instructions + policies, REFLECT.external=False, EXPAND.external=True
+- `prompts.py` — CHALLENGE mode now prioritizes query-matching memories, enforces Vietnamese output, and uses a 3-part challenge structure.
 - `mode_controller.py` — VALID_MODES from MODE_INSTRUCTIONS keys, raises InvalidModeError
 - `schemas/query.py` — ModeEnum (5 values), content_type field_validator
 - `service.py` — EXPAND-only external, removed token-threshold + MIN_CONTEXT_TOKENS
@@ -84,7 +87,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - `workers/run_embedding.py` — worker now uses `get_embedding_adapter()` (provider-aware), no hardcoded OpenAI embedding adapter.
 - `app/reasoning/service.py` + `app/retrieval/relevance_gate.py` — added Relevance Gate (mode-specific top-sim floor + dynamic cutoff + max_results) to reduce semantically weak context.
 - `app/reasoning/service.py` — RECALL short-circuit when no gated memories: deterministic no-memory response, skip LLM call.
-- `app/schemas/query.py` — default query threshold tightened from `0.7` to `0.55`.
+- `app/schemas/query.py` + `app/schemas/search.py` — default threshold updated to `0.45` (app-layer floor model).
+- `app/retrieval/search.py` + `app/retrieval/ranking.py` — controlled diversity implemented without random retrieval; semantic ranking remains primary.
+- `app/reasoning/service.py` — RECALL now returns deterministic memory list when memories exist (no LLM paraphrase drift).
+- `app/retrieval/ranking.py` + `app/retrieval/search.py` — added lexical anchor bonus for RECALL/CHALLENGE to prioritize direct keyword matches.
+- `app/retrieval/relevance_gate.py` — tuned RECALL/CHALLENGE gate window and max_results to reduce missed same-topic memories.
+- `app/retrieval/search.py` — removed DB distance-threshold filter; SQL now fetches Top-K candidates and applies relevance floors in app layer.
+- `app/retrieval/search.py` — added production hardening gates: absolute floor, mode floor, score-gap filter, and mode hard cap (precision-first retrieval).
+- `app/retrieval/search.py` — added same-query cooldown reorder for RECALL/CHALLENGE to reduce repeated memory sets across consecutive identical queries.
+- `app/retrieval/ranking.py` — diversity bonus now capped and only applied on high-similarity memories (`similarity >= 0.70`).
+- `app/config.py` — removed unused `retrieval_distance_threshold` setting.
+- `app/config.py` — added `retrieval_query_cooldown_logs` to control replay anti-repeat window.
 
 ---
 

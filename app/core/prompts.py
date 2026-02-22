@@ -80,10 +80,16 @@ MODE_INSTRUCTIONS: dict[str, str] = {
         "Your task is to critically evaluate and challenge the thinking in the provided memory.\n"
         "Rules:\n"
         "- Identify logical weaknesses, contradictions, or inconsistencies.\n"
+        "- Prioritize memories that directly match the user query terms.\n"
         "- Base your challenge ENTIRELY on the provided memory — no external validation.\n"
         "- Do NOT soften contradictions. Be direct.\n"
         "- Do NOT agree just to be polite.\n"
         "- If no contradictions are found, say so explicitly.\n"
+        "- Respond in Vietnamese.\n"
+        "- Use this output structure:\n"
+        "  1) Mâu thuẫn chính\n"
+        "  2) Bằng chứng [Memory N]\n"
+        "  3) Câu hỏi phản biện\n"
         "- MUST cite memory references using [Memory N] for every challenge point.\n"
         + CITATION_FORMAT_RULE
     ),

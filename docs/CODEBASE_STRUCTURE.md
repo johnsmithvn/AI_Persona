@@ -298,7 +298,7 @@ Reasoning → KHÔNG query DB trực tiếp
 #     start_date: datetime (optional)
 #     end_date: datetime (optional)
 #     limit: int (default: 20)
-#     threshold: float (default: 0.7)
+#     threshold: float (default: 0.45)
 #
 # - SearchResponse
 #     results: list[MemorySearchResult]
@@ -315,6 +315,7 @@ Reasoning → KHÔNG query DB trực tiếp
 #     query: str (required)
 #     mode: ModeEnum (default: 'RECALL')
 #     content_type: ContentTypeEnum (optional)
+#     threshold: float (default: 0.45)
 #
 # - QueryResponse
 #     response: str
@@ -390,9 +391,11 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 # Methods:
 # - search(query: str, filters) → list[RankedMemory]
 #     1. Gọi EmbeddingAdapter.embed_query(query)
-#     2. Execute SQL (cosine + filter + candidate pool)
-#     3. Apply ranking formula
-#     4. Return ranked list
+#     2. Execute SQL Top-K (cosine + filter + candidate pool=200, no DB threshold)
+#     3. Apply semantic floors (absolute + mode + request floor)
+#     4. Apply ranking + score-gap + mode hard cap
+#     4.5 RECALL/CHALLENGE: same-query cooldown reorder (fresh first)
+#     5. Return ranked list
 #
 # RetrievalService không được gọi OpenAI trực tiếp.
 # Chỉ gọi EmbeddingAdapter interface.
@@ -414,6 +417,9 @@ Ingestion layer phải xử lý chunking trước khi gọi save_memory().
 #
 # - deduplicate_memories(memories, threshold=0.95) → list
 #     Loại bỏ memory quá giống nhau (diversity guard)
+#
+# - compute_exposure_diversity_bonus(retrieval_count) → float
+#     Bonus nhỏ (cap 0.02), chỉ để giảm lặp memory, không phá semantic ordering
 #
 # - apply_token_budget(memories, max_tokens) → list
 #     Sort by final_score

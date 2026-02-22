@@ -17,7 +17,15 @@ class SearchRequest(BaseModel):
     start_date: Optional[datetime] = Field(default=None)
     end_date: Optional[datetime] = Field(default=None)
     limit: int = Field(default=20, ge=1, le=100)
-    threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Cosine distance threshold (lower = more similar).")
+    threshold: float = Field(
+        default=0.45,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Cosine distance threshold (app-layer floor). "
+            "Converted to similarity floor via similarity = 1 - distance."
+        ),
+    )
     metadata_filter: Optional[dict[str, Any]] = Field(default=None, description="JSONB filter, e.g. {'tags': ['ai']}")
     include_summaries: bool = Field(default=False, description="Include is_summary=true records.")
 
