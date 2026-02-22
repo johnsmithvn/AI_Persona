@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import get_settings
 from app.db.session import AsyncSessionLocal
-from app.llm.openai_embedding_adapter import OpenAIEmbeddingAdapter
+from app.deps import get_embedding_adapter
 from app.logging.logger import logger
 from app.memory.embedding_worker import EmbeddingWorker
 
@@ -25,7 +25,7 @@ settings = get_settings()
 
 async def run_loop() -> None:
     """Main worker loop — polls for pending jobs indefinitely."""
-    adapter = OpenAIEmbeddingAdapter()
+    adapter = get_embedding_adapter()
     logger.info("embedding_worker_started", extra={
         "model": adapter.model_name,
         "interval_seconds": settings.embedding_worker_interval_seconds,

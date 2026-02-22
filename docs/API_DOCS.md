@@ -207,7 +207,7 @@ Full reasoning pipeline:
     "query": "Tư duy của tao về AI thay đổi thế nào?",
     "mode": "REFLECT",
     "content_type": null,
-    "threshold": 0.7
+    "threshold": 0.55
 }
 ```
 
@@ -216,7 +216,10 @@ Full reasoning pipeline:
 | `query` | `string` | ✅ | — | Question hoặc prompt |
 | `mode` | `string` | ❌ | `"RECALL"` | Enum: `RECALL`, `SYNTHESIZE`, `REFLECT`, `CHALLENGE`, `EXPAND` |
 | `content_type` | `string` | ❌ | `null` | Restrict retrieval to type |
-| `threshold` | `float` | ❌ | `0.7` | Cosine distance threshold |
+| `threshold` | `float` | ❌ | `0.55` | Cosine distance threshold (lower = stricter) |
+
+> **Relevance Gate (v0.3.x):** Sau retrieval, hệ thống áp dụng thêm gate theo mode (`min_top_similarity`, `relative_drop`, `max_results`) để loại các memory "gần gần".  
+> Với `RECALL`, nếu sau gate không còn memory phù hợp, API trả trực tiếp: `"Không có memory liên quan đến câu hỏi này."`
 
 #### Modes
 

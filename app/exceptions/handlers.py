@@ -105,7 +105,7 @@ class PolicyViolationError(AppError):
         super().__init__(
             code="POLICY_VIOLATION",
             message=f"[{mode}] Policy violation: {violation}",
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
 
 

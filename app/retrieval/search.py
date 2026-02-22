@@ -66,13 +66,25 @@ class RetrievalService:
             WHERE embedding IS NOT NULL
               AND exclude_from_retrieval = false
               AND is_archived = false
-              AND embedding_model = :embedding_model
-              AND (:content_type IS NULL OR content_type = :content_type)
-              AND (:start_date IS NULL OR created_at >= :start_date)
-              AND (:end_date IS NULL OR created_at <= :end_date)
-              AND (embedding <=> CAST(:embedding AS vector)) < :threshold
-              AND (:include_summaries = true OR is_summary = false)
-              AND (:metadata_filter IS NULL OR metadata @> CAST(:metadata_filter AS jsonb))
+              AND embedding_model = CAST(:embedding_model AS VARCHAR)
+              AND (
+                    CAST(:content_type AS VARCHAR) IS NULL
+                    OR content_type = CAST(:content_type AS VARCHAR)
+              )
+              AND (
+                    CAST(:start_date AS TIMESTAMPTZ) IS NULL
+                    OR created_at >= CAST(:start_date AS TIMESTAMPTZ)
+              )
+              AND (
+                    CAST(:end_date AS TIMESTAMPTZ) IS NULL
+                    OR created_at <= CAST(:end_date AS TIMESTAMPTZ)
+              )
+              AND (embedding <=> CAST(:embedding AS vector)) < CAST(:threshold AS DOUBLE PRECISION)
+              AND (CAST(:include_summaries AS BOOLEAN) = true OR is_summary = false)
+              AND (
+                    CAST(:metadata_filter AS JSONB) IS NULL
+                    OR metadata @> CAST(:metadata_filter AS JSONB)
+              )
             ORDER BY embedding <=> CAST(:embedding AS vector)
             LIMIT 500
         )

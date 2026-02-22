@@ -27,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.personality import build_system_prompt, load_personality
 from app.core.prompts import ModePolicy
-from app.core.token_guard import TokenGuard
+from app.core.token_guard import BudgetedMemory, TokenGuard
 from app.db.models import ReasoningLog
 from app.llm.adapter import LLMAdapter, LLMConfig
 from app.llm.embedding_adapter import EmbeddingAdapter
@@ -35,6 +35,7 @@ from app.logging.logger import logger
 from app.exceptions.handlers import PolicyViolationError
 from app.reasoning.mode_controller import ModeController
 from app.reasoning.prompt_builder import PromptBuilder
+from app.retrieval.relevance_gate import apply_relevance_gate
 from app.retrieval.search import RetrievalService, SearchFilters
 from app.schemas.query import QueryRequest, QueryResponse
 
@@ -72,8 +73,23 @@ class ReasoningService:
         )
         memories = await self._retrieval.search(request.query, filters)
 
+        # 1.1 Relevance gate — strict filtering to avoid near-near noise.
+        memories, gate_decision = apply_relevance_gate(memories, mode)
+        logger.info("relevance_gate_applied", extra=gate_decision.to_log())
+
         # 2. Apply token budget
         budgeted = self._token_guard.check_budget(memories)
+
+        # Strict RECALL rule: if no memory survives retrieval+gate, return deterministic
+        # no-memory response (skip LLM to avoid off-policy generation).
+        if mode == "RECALL" and not budgeted:
+            logger.info("recall_no_memory_short_circuit", extra={"mode": mode})
+            return await self._return_no_memory_response(
+                request=request,
+                mode=mode,
+                external_knowledge_used=False,
+                start_time=start_time,
+            )
 
         # 3. Mode instruction + policy
         mode_instruction = self._mode_ctrl.get_instruction(mode)
@@ -101,6 +117,15 @@ class ReasoningService:
             full_prompt,
             LLMConfig(temperature=0.3, max_tokens=1200),
         )
+
+        # Some local models may ignore citation instructions in RECALL mode.
+        # Build deterministic verbatim output with citations instead of failing.
+        if mode == "RECALL" and budgeted and not _CITATION_PATTERN.search(llm_response.content):
+            logger.warning(
+                "recall_citation_fallback_applied",
+                extra={"mode": mode, "memory_count": len(budgeted)},
+            )
+            llm_response.content = self._build_recall_fallback(budgeted)
 
         # 7. Validate citations — enforce must_cite_memory_id policy
         self._validate_citations(
@@ -153,6 +178,58 @@ class ReasoningService:
                 "prompt_tokens": llm_response.prompt_tokens,
                 "completion_tokens": llm_response.completion_tokens,
                 "total": llm_response.total_tokens,
+            },
+            external_knowledge_used=external_knowledge_used,
+            latency_ms=latency_ms,
+        )
+
+    @staticmethod
+    def _build_recall_fallback(memories: list[BudgetedMemory]) -> str:
+        """Build deterministic RECALL response with explicit [Memory N] citations."""
+        lines: list[str] = ["Dưới đây là các memory liên quan:"]
+        for idx, memory in enumerate(memories, start=1):
+            lines.append(f"- [Memory {idx}] {memory.raw_text.strip()}")
+        return "\n".join(lines)
+
+    async def _return_no_memory_response(
+        self,
+        request: QueryRequest,
+        mode: str,
+        external_knowledge_used: bool,
+        start_time: float,
+    ) -> QueryResponse:
+        """Persist and return deterministic no-memory response for strict RECALL."""
+        response_text = "Không có memory liên quan đến câu hỏi này."
+        latency_ms = int((time.monotonic() - start_time) * 1000)
+        memory_ids: list[uuid.UUID] = []
+
+        log = ReasoningLog(
+            user_query=request.query,
+            mode=mode,
+            memory_ids=memory_ids,
+            prompt_hash=None,
+            debug_prompt=None,
+            external_knowledge_used=external_knowledge_used,
+            confidence_score=0.5,
+            response=response_text,
+            token_usage={
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total": 0,
+            },
+            latency_ms=latency_ms,
+        )
+        self._session.add(log)
+        await self._session.commit()
+
+        return QueryResponse(
+            response=response_text,
+            mode=mode,
+            memory_used=memory_ids,
+            token_usage={
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total": 0,
             },
             external_knowledge_used=external_knowledge_used,
             latency_ms=latency_ms,

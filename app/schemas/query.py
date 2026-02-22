@@ -29,7 +29,12 @@ class QueryRequest(BaseModel):
         default=None,
         description="Optional filter: restrict retrieval to this content type.",
     )
-    threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    threshold: float = Field(
+        default=0.55,
+        ge=0.0,
+        le=1.0,
+        description="Cosine distance threshold for retrieval. Lower = stricter matching.",
+    )
 
     @field_validator("content_type")
     @classmethod

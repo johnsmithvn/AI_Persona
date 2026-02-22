@@ -77,6 +77,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - `app/schemas/search.py` — `SearchResponse.ranking_profile` added
 - `app/api/search.py` — response includes resolved `ranking_profile`
 
+### Fixed
+- `app/retrieval/search.py` — fixed asyncpg `AmbiguousParameterError` on nullable filters (`content_type`, `start_date`, `end_date`, `metadata_filter`) by adding explicit SQL casts.
+- `app/exceptions/handlers.py` — `PolicyViolationError` now returns `422` instead of `500`.
+- `app/reasoning/service.py` — added RECALL fallback when LLM omits citations: build deterministic `[Memory N]` response instead of failing request.
+- `workers/run_embedding.py` — worker now uses `get_embedding_adapter()` (provider-aware), no hardcoded OpenAI embedding adapter.
+- `app/reasoning/service.py` + `app/retrieval/relevance_gate.py` — added Relevance Gate (mode-specific top-sim floor + dynamic cutoff + max_results) to reduce semantically weak context.
+- `app/reasoning/service.py` — RECALL short-circuit when no gated memories: deterministic no-memory response, skip LLM call.
+- `app/schemas/query.py` — default query threshold tightened from `0.7` to `0.55`.
+
 ---
 
 ## [0.2.0] — 2026-02-21
